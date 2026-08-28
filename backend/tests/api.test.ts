@@ -29,6 +29,64 @@ describe("KOReader Kosync API Endpoints", () => {
     });
   });
 
+  describe("Code-Based Pairing Flow (/api/session)", () => {
+    it("creates a new 6-character pairing session", async () => {
+      const res = await app.request(
+        "/api/session/create",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        },
+        env
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json<any>();
+      expect(data.success).toBe(true);
+      expect(typeof data.session_id).toBe("string");
+      expect(data.session_id.length).toBe(6);
+      expect(data.expires_in).toBe(600);
+    });
+
+    it("handles full pairing lifecycle between e-reader and phone browser", async () => {
+      // 1. E-reader creates session
+      const createRes = await app.request(
+        "/api/session/create",
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+        env
+      );
+      const { session_id } = await createRes.json<any>();
+
+      // 2. Initial poll returns 204 No Content (waiting for phone)
+      const pollRes1 = await app.request(`/api/session/${session_id}/poll`, { method: "GET" }, env);
+      expect(pollRes1.status).toBe(204);
+
+      // 3. User enters code and clicks Connect on phone
+      const submitRes = await app.request(
+        `/api/session/${session_id}/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: "my_kindle", userkey: "secret_sync_key" }),
+        },
+        env
+      );
+      expect(submitRes.status).toBe(200);
+      const submitData = await submitRes.json<any>();
+      expect(submitData.success).toBe(true);
+
+      // 4. E-reader poll now receives credentials
+      const pollRes2 = await app.request(`/api/session/${session_id}/poll`, { method: "GET" }, env);
+      expect(pollRes2.status).toBe(200);
+      const pollData = await pollRes2.json<any>();
+      expect(pollData.success).toBe(true);
+      expect(pollData.status).toBe("ready");
+      expect(pollData.username).toBe("my_kindle");
+      expect(pollData.userkey).toBe("secret_sync_key");
+    });
+  });
+
   describe("User Registration (/users/create)", () => {
     it("registers a new user successfully", async () => {
       const res = await app.request(

@@ -35,6 +35,16 @@ export async function ensureDatabase(db: D1Database): Promise<void> {
         )
       `),
       db.prepare(`
+        CREATE TABLE IF NOT EXISTS pairing_sessions (
+          session_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL,
+          username TEXT,
+          userkey TEXT,
+          expires_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL
+        )
+      `),
+      db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username)
       `),
     ]);

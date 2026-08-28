@@ -6,41 +6,40 @@ A complete, private reading progress synchronization solution for [KOReader](htt
 
 ---
 
-## Architecture Overview
+## Zero-Password Device Pairing
+
+Pair your Kindle / KOReader device in 5 seconds without typing passwords on an e-ink keyboard:
 
 ```mermaid
-flowchart LR
-    subgraph Device [Kindle / KOReader Device]
-        direction TB
-        Hook[Lifecycle Hooks] --> Check{Device Online?}
-        Check -->|Yes| SilentSync[Silent Background Sync]
-        Check -->|No| Skip[Skip Sync - No Popups]
-        User[User Sync Now Tap] --> ManualSync[Prompt Wifi and Sync]
-    end
+sequenceDiagram
+    autonumber
+    actor User
+    participant Kindle as Kindle (KOReader)
+    participant Phone as Phone / PC Browser
+    participant Server as Sink Worker (Cloudflare)
 
-    subgraph Edge [Cloudflare Edge Network]
-        direction TB
-        Worker[Hono Worker API]
-        D1[(Cloudflare D1 Database)]
-        Worker --> D1
-    end
-
-    SilentSync -->|HTTPS Request| Worker
-    ManualSync -->|HTTPS Request| Worker
+    User->>Kindle: Tap "Pair Device (Phone / PC)"
+    Kindle->>Server: Request pairing session
+    Server-->>Kindle: 6-Character Code (e.g. K9X 2P4)
+    Kindle->>Kindle: Display Code on screen
+    User->>Phone: Open Sink Web Dashboard & enter code
+    Phone->>Server: Connect Device
+    Server-->>Kindle: Auto-paired!
+    Kindle->>Kindle: Save credentials & activate sync
 ```
 
 ---
 
 ## Repository Structure
 
-- [`backend/`](./backend) - Cloudflare Worker implementation using TypeScript, Hono, and Cloudflare D1. Includes 1-click deploy setup, D1 schema, and automated tests.
-- [`sink.koplugin/`](./sink.koplugin) - KOReader user plugin optimized for e-ink devices, non-intrusive Wi-Fi management, and silent background synchronization.
+- [`backend/`](./backend) - Cloudflare Worker implementation using TypeScript, Hono, and Cloudflare D1. Includes 1-click deploy setup, pairing endpoints, and automated tests.
+- [`sink.koplugin/`](./sink.koplugin) - KOReader user plugin with seamless code pairing, non-intrusive Wi-Fi management, and silent background synchronization.
 
 ---
 
 ## 1-Click Backend Deployment
 
-Click the button below to deploy the backend to Cloudflare Workers in a new tab:
+Click the button below to deploy the backend to Cloudflare Workers:
 
 <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink" target="_blank" rel="noopener noreferrer"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" /></a>
 
@@ -48,24 +47,21 @@ Click the button below to deploy the backend to Cloudflare Workers in a new tab:
 
 ## Quickstart Guide
 
-### 1. Backend Setup
+### 1. Deploy the Backend
+Deploy via the button above, or run locally:
 ```bash
 cd backend
 npm install
-npm run d1:init:local   # Initialize local D1 SQLite database
-npm test                # Run Vitest test suite
+npm test                # Run Vitest test suite (17 tests)
 npm run dev             # Start local development server
 ```
-
-For production deployment instructions, see [`backend/README.md`](./backend/README.md).
 
 ### 2. KOReader Plugin Installation
 1. Copy the [`sink.koplugin`](./sink.koplugin) folder to your device's `koreader/plugins/` directory.
 2. Restart KOReader.
-3. Open the menu -> **Sink Progress Sync** -> configure your **Server URL**, **Username**, and **User Key / Password**.
-4. Tap **Register New Account** (or **Test Connection / Login**).
-
-For full details, see [`sink.koplugin/README.md`](./sink.koplugin/README.md).
+3. Open the top menu &rarr; **Sink Progress Sync** &rarr; **Pair Device (Phone / PC)**.
+4. Open your Worker URL on your phone or PC, enter the 6-character code, and tap **Connect E-Reader**.
+5. Your device is now connected and reading progress will sync automatically!
 
 ---
 

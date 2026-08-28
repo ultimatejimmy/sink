@@ -14,6 +14,12 @@ local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local _ = require("gettext")
 
+local plugin_path = ((...) or ""):match("(.-)[^%.]+$") or ""
+local SinkPairing = nil
+pcall(function()
+    SinkPairing = require(plugin_path .. "sink_pairing")
+end)
+
 local Sink = WidgetContainer:extend{
     name = "sink",
     is_doc_only = false,
@@ -208,7 +214,7 @@ function Sink:_syncDocument(is_manual)
     if not self.settings.username or self.settings.username == "" then
         if is_manual then
             UIManager:show(InfoMessage:new{
-                text = _("Please configure your Sink username and key in settings."),
+                text = _("Please pair your device or configure credentials in settings."),
             })
         end
         return false
@@ -353,6 +359,19 @@ end
 function Sink:getMenuTable()
     return {
         {
+            text = _("Pair Device (Phone / PC)"),
+            keep_menu_open = false,
+            callback = function()
+                if SinkPairing then
+                    SinkPairing:startPairing(self, function()
+                        self:_syncDocument(true)
+                    end)
+                else
+                    UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })
+                end
+            end,
+        },
+        {
             text = _("Sync Now"),
             keep_menu_open = false,
             callback = function()
@@ -386,45 +405,20 @@ function Sink:getMenuTable()
             end,
         },
         {
-            text = _("Username"),
+            text = _("Device Account Status"),
             subtext_func = function()
-                return (self.settings.username ~= "" and self.settings.username) or _("Not set")
+                return (self.settings.username ~= "" and ("Paired (" .. self.settings.username .. ")")) or _("Not paired")
             end,
             callback = function()
-                self:showInputDialog(_("Username"), self.settings.username, function(val)
-                    self.settings.username = trim(val)
-                    self:saveSettings()
-                end)
-            end,
-        },
-        {
-            text = _("User Key / Password"),
-            subtext_func = function()
-                return (self.settings.userkey ~= "" and "••••••••") or _("Not set")
-            end,
-            callback = function()
-                self:showInputDialog(_("User Key / Password"), self.settings.userkey, function(val)
-                    self.settings.userkey = trim(val)
-                    self:saveSettings()
-                end)
-            end,
-        },
-        {
-            text = _("Test Connection / Login"),
-            keep_menu_open = false,
-            callback = function()
-                NetworkMgr:runWhenOnline(function()
-                    self:testConnection()
-                end)
-            end,
-        },
-        {
-            text = _("Register New Account"),
-            keep_menu_open = false,
-            callback = function()
-                NetworkMgr:runWhenOnline(function()
-                    self:registerAccount()
-                end)
+                if self.settings.username ~= "" then
+                    NetworkMgr:runWhenOnline(function()
+                        self:testConnection()
+                    end)
+                else
+                    if SinkPairing then
+                        SinkPairing:startPairing(self)
+                    end
+                end
             end,
         },
     }
@@ -459,7 +453,7 @@ function Sink:showInputDialog(title, initial_value, on_confirm)
 end
 
 function Sink:testConnection()
-    UIManager:show(Notification:new{ text = _("Authenticating with server...") })
+    UIManager:show(Notification:new{ text = _("Checking connection to Sink server...") })
     local res, err = self:_makeRequest("GET", "/users/auth")
     if err or not res then
         UIManager:show(InfoMessage:new{
@@ -470,61 +464,17 @@ function Sink:testConnection()
 
     if res.status == 200 then
         UIManager:show(InfoMessage:new{
-            text = _("Authentication successful!\nConnected as: ") .. tostring(self.settings.username),
+            text = _("✓ Connected & Synced!\nAccount: ") .. tostring(self.settings.username),
         })
     elseif res.status == 401 then
         UIManager:show(InfoMessage:new{
-            text = _("Authentication failed (401 Unauthorized).\nPlease check your username and user key."),
+            text = _("Authentication failed (401 Unauthorized).\nTap 'Pair Device' to re-link your e-reader."),
         })
     else
         UIManager:show(InfoMessage:new{
             text = string.format(_("Server returned HTTP %d:\n%s"), res.status, tostring(res.raw or "")),
         })
     end
-end
-
-function Sink:registerAccount()
-    if not self.settings.username or self.settings.username == "" or not self.settings.userkey or self.settings.userkey == "" then
-        UIManager:show(InfoMessage:new{
-            text = _("Please enter a username and password in settings before registering."),
-        })
-        return
-    end
-
-    local confirm
-    confirm = ConfirmBox:new{
-        text = string.format(_("Register account '%s' on %s?"), self.settings.username, self.settings.server_url),
-        ok_text = _("Register"),
-        ok_callback = function()
-            UIManager:show(Notification:new{ text = _("Registering account...") })
-            local res, err = self:_makeRequest("POST", "/users/create", {
-                username = self.settings.username,
-                password = self.settings.userkey,
-            })
-
-            if err or not res then
-                UIManager:show(InfoMessage:new{
-                    text = _("Registration failed:\n") .. tostring(err or "Network error"),
-                })
-                return
-            end
-
-            if res.status == 201 then
-                UIManager:show(InfoMessage:new{
-                    text = _("Account successfully registered!\nYou can now sync reading progress across your devices."),
-                })
-            elseif res.status == 402 or (res.body and res.body.code == 2002) then
-                UIManager:show(InfoMessage:new{
-                    text = _("This username is already registered on the server.\nTry logging in with 'Test Connection' instead."),
-                })
-            else
-                UIManager:show(InfoMessage:new{
-                    text = string.format(_("Registration failed (HTTP %d):\n%s"), res.status, tostring(res.raw or "")),
-                })
-            end
-        end,
-    }
-    UIManager:show(confirm)
 end
 
 return Sink
