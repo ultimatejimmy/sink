@@ -2,3 +2,8 @@ name = "sink"
 main = "backend/src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sink_db"
+database_id = "00000000-0000-0000-0000-000000000000"
