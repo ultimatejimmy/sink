@@ -1,0 +1,10 @@
+name = "koreader-sync-server"
+main = "backend/src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "koreader_sync_db"
+database_id = ""
+migrations_dir = "migrations"

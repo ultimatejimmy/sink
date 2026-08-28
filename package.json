@@ -1,0 +1,24 @@
+{
+  "name": "sink",
+  "version": "1.0.0",
+  "description": "Private reading progress sync solution for KOReader on Kindle and other e-readers",
+  "main": "backend/src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "npm --prefix backend test",
+    "build": "npm --prefix backend run build",
+    "d1:init:local": "wrangler d1 execute DB --local --file=./migrations/0001_init.sql",
+    "d1:init:remote": "wrangler d1 execute DB --remote --file=./migrations/0001_init.sql",
+    "d1:migrate:local": "wrangler d1 migrations apply DB --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply DB --remote"
+  },
+  "dependencies": {
+    "hono": "^4.7.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.111.0"
+  }
+}

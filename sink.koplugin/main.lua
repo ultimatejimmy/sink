@@ -1,0 +1,530 @@
+local WidgetContainer = require("ui/widget/container/widgetcontainer")
+local UIManager = require("ui/uimanager")
+local NetworkMgr = require("ui/network/manager")
+local Notification = require("ui/widget/notification")
+local InfoMessage = require("ui/widget/infomessage")
+local InputDialog = require("ui/widget/inputdialog")
+local ConfirmBox = require("ui/widget/confirmbox")
+local Device = require("device")
+local logger = require("logger")
+local json = require("json")
+local socket = require("socket")
+local http = require("socket.http")
+local https = require("ssl.https")
+local ltn12 = require("ltn12")
+local _ = require("gettext")
+
+local Sink = WidgetContainer:extend{
+    name = "sink",
+    is_doc_only = false,
+}
+
+-- Default Configuration
+local DEFAULT_SETTINGS = {
+    server_url = "https://your-sink-worker.workers.dev",
+    username = "",
+    userkey = "",
+    auto_sync = true,
+    last_sync_time = 0,
+    last_sync_doc = "",
+}
+
+function Sink:init()
+    self.ui.menu:registerToMainMenu(self)
+    self:loadSettings()
+end
+
+function Sink:loadSettings()
+    self.settings = G_reader_settings:readSetting("sink_sync") or {}
+    for k, v in pairs(DEFAULT_SETTINGS) do
+        if self.settings[k] == nil then
+            self.settings[k] = v
+        end
+    end
+end
+
+function Sink:saveSettings()
+    G_reader_settings:saveSetting("sink_sync", self.settings)
+end
+
+--------------------------------------------------------------------------------
+-- HTTP & API Client Helper
+--------------------------------------------------------------------------------
+
+local function trim(s)
+    if not s then return "" end
+    return s:match("^%s*(.-)%s*$")
+end
+
+local function cleanUrl(url)
+    url = trim(url)
+    if url:sub(-1) == "/" then
+        url = url:sub(1, -2)
+    end
+    return url
+end
+
+function Sink:_makeRequest(method, endpoint, body_table)
+    local server_url = cleanUrl(self.settings.server_url)
+    if not server_url or server_url == "" then
+        return nil, "Server URL is not configured."
+    end
+
+    local url = server_url .. endpoint
+    local req_body = nil
+    local headers = {
+        ["Accept"] = "application/vnd.koreader.v1+json, application/json",
+        ["x-auth-user"] = self.settings.username or "",
+        ["x-auth-key"] = self.settings.userkey or "",
+    }
+
+    if body_table then
+        req_body = json.encode(body_table)
+        headers["Content-Type"] = "application/json"
+        headers["Content-Length"] = tostring(#req_body)
+    end
+
+    local response_body = {}
+    local protocol = url:match("^(https?)://")
+    local request_fn = (protocol == "https") and https.request or http.request
+
+    local ok, code, resp_headers, status_line = pcall(function()
+        return request_fn{
+            url = url,
+            method = method,
+            headers = headers,
+            source = req_body and ltn12.source.string(req_body) or nil,
+            sink = ltn12.sink.table(response_body),
+            timeout = 10,
+        }
+    end)
+
+    if not ok then
+        return nil, "Network error: " .. tostring(code)
+    end
+
+    local raw_res = table.concat(response_body)
+    local decoded = nil
+    if raw_res and #raw_res > 0 then
+        pcall(function() decoded = json.decode(raw_res) end)
+    end
+
+    return {
+        status = code or 0,
+        headers = resp_headers or {},
+        body = decoded or {},
+        raw = raw_res,
+    }, nil
+end
+
+--------------------------------------------------------------------------------
+-- Document & Progress Utilities
+--------------------------------------------------------------------------------
+
+function Sink:_getDocumentMD5()
+    if not self.ui then return nil end
+    if self.ui.doc_settings and self.ui.doc_settings:readSetting("doc_md5") then
+        return self.ui.doc_settings:readSetting("doc_md5")
+    end
+    if self.ui.document then
+        if self.ui.document.file_hash then
+            return self.ui.document.file_hash
+        end
+        if self.ui.document.getMD5 then
+            local ok, md5 = pcall(function() return self.ui.document:getMD5() end)
+            if ok and md5 then return md5 end
+        end
+    end
+    return nil
+end
+
+function Sink:_getLocalProgress()
+    if not self.ui or not self.ui.document then return nil, nil end
+    local progress = nil
+    local percentage = nil
+
+    -- Extract xpointer / bookmark progress
+    if self.ui.bookmark and self.ui.bookmark.getProgress then
+        local ok, p = pcall(function() return self.ui.bookmark:getProgress() end)
+        if ok and p then progress = p end
+    end
+    if not progress and self.ui.document and self.ui.document.getXPointer then
+        local ok, p = pcall(function() return self.ui.document:getXPointer() end)
+        if ok and p then progress = p end
+    end
+    if not progress and self.ui.paging and self.ui.paging.current_page then
+        progress = tostring(self.ui.paging.current_page)
+    end
+
+    -- Extract percentage
+    if self.ui.doc_settings and self.ui.doc_settings:readSetting("percent_finished") then
+        percentage = tonumber(self.ui.doc_settings:readSetting("percent_finished"))
+    elseif self.ui.document and self.ui.document.totalPages and self.ui.paging and self.ui.paging.current_page then
+        percentage = self.ui.paging.current_page / self.ui.document.totalPages
+    end
+
+    return percentage, progress
+end
+
+function Sink:_applyRemoteProgress(remote_progress, remote_percentage)
+    if not self.ui or not remote_progress then return end
+    if self.ui.bookmark and self.ui.bookmark.restoreProgress then
+        pcall(function() self.ui.bookmark:restoreProgress(remote_progress) end)
+    elseif self.ui.gotoXPointer then
+        pcall(function() self.ui:gotoXPointer(remote_progress) end)
+    elseif self.ui.gotoPage and tonumber(remote_progress) then
+        pcall(function() self.ui:gotoPage(tonumber(remote_progress)) end)
+    end
+end
+
+function Sink:_getDeviceInfo()
+    local model = "Kindle"
+    local device_id = "kindle_device"
+
+    if Device then
+        if Device.getModel then
+            pcall(function() model = Device:getModel() end)
+        elseif Device.model then
+            model = tostring(Device.model)
+        end
+
+        if Device.getDeviceId then
+            pcall(function() device_id = Device:getDeviceId() end)
+        elseif Device.id then
+            device_id = tostring(Device.id)
+        end
+    end
+
+    return model, device_id
+end
+
+--------------------------------------------------------------------------------
+-- Core Sync Actions
+--------------------------------------------------------------------------------
+
+-- Perform sync for the current document
+-- is_manual: boolean flag. If true, show user-facing notifications/alerts.
+function Sink:_syncDocument(is_manual)
+    if not self.settings.username or self.settings.username == "" then
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("Please configure your Sink username and key in settings."),
+            })
+        end
+        return false
+    end
+
+    local doc_md5 = self:_getDocumentMD5()
+    if not doc_md5 then
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("No active document found to sync."),
+            })
+        end
+        return false
+    end
+
+    local local_pct, local_prog = self:_getLocalProgress()
+    if not local_pct or not local_prog then
+        logger.dbg("Sink: unable to extract local progress for document " .. tostring(doc_md5))
+        return false
+    end
+
+    -- 1. Fetch remote progress
+    local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
+    if err or not res or (res.status ~= 200 and res.status ~= 201) then
+        logger.dbg("Sink: error fetching remote progress: " .. tostring(err or res and res.status))
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("Failed to sync progress:\n") .. tostring(err or (res and res.raw) or "Unknown error"),
+            })
+        end
+        return false
+    end
+
+    local remote = res.body or {}
+    local remote_pct = tonumber(remote.percentage)
+    local remote_prog = remote.progress
+    local remote_ts = tonumber(remote.timestamp) or 0
+
+    local dev_model, dev_id = self:_getDeviceInfo()
+
+    -- 2. Compare: If remote progress exists and is further than local progress, apply remote
+    if remote_pct and remote_prog and remote_pct > (local_pct + 0.0001) then
+        self:_applyRemoteProgress(remote_prog, remote_pct)
+        self.settings.last_sync_time = remote_ts > 0 and remote_ts or os.time()
+        self.settings.last_sync_doc = doc_md5
+        self:saveSettings()
+
+        if is_manual then
+            UIManager:show(Notification:new{
+                text = string.format(_("Synced from cloud: %.1f%% (%s)"), remote_pct * 100, remote.device or "Remote"),
+            })
+        end
+        return true
+    else
+        -- 3. Local progress is equal or further: push local progress to cloud
+        local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", {
+            document = doc_md5,
+            percentage = local_pct,
+            progress = local_prog,
+            device = dev_model,
+            device_id = dev_id,
+        })
+
+        if push_err or not push_res or push_res.status ~= 200 then
+            logger.dbg("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
+            if is_manual then
+                UIManager:show(InfoMessage:new{
+                    text = _("Failed to upload progress:\n") .. tostring(push_err or (push_res and push_res.raw) or "Unknown error"),
+                })
+            end
+            return false
+        end
+
+        local ts = (push_res.body and push_res.body.timestamp) or os.time()
+        self.settings.last_sync_time = ts
+        self.settings.last_sync_doc = doc_md5
+        self:saveSettings()
+
+        if is_manual then
+            UIManager:show(Notification:new{
+                text = string.format(_("Synced to cloud: %.1f%%"), local_pct * 100),
+            })
+        end
+        return true
+    end
+end
+
+--------------------------------------------------------------------------------
+-- Non-Intrusive Lifecycle Hooks
+-- Crucial: Must NEVER trigger Wi-Fi popups in background.
+-- Uses NetworkMgr:isOnline() and completely suppresses errors.
+--------------------------------------------------------------------------------
+
+function Sink:_silentBackgroundSync(trigger_name)
+    if not self.settings.auto_sync then
+        return
+    end
+
+    -- Non-intrusive check: is the device currently connected to Wi-Fi?
+    if not NetworkMgr:isOnline() then
+        logger.dbg("Sink [" .. trigger_name .. "]: Device is offline. Silently skipping sync.")
+        return
+    end
+
+    logger.dbg("Sink [" .. trigger_name .. "]: Device online. Performing silent sync.")
+    local ok, err = pcall(function()
+        self:_syncDocument(false)
+    end)
+    if not ok then
+        -- Suppress all background errors
+        logger.dbg("Sink [" .. trigger_name .. "] silent sync error: " .. tostring(err))
+    end
+end
+
+function Sink:onReaderReady()
+    self:_silentBackgroundSync("onReaderReady")
+end
+
+function Sink:onCloseDocument()
+    self:_silentBackgroundSync("onCloseDocument")
+end
+
+function Sink:onSuspend()
+    self:_silentBackgroundSync("onSuspend")
+end
+
+function Sink:onNetworkConnected()
+    self:_silentBackgroundSync("onNetworkConnected")
+end
+
+--------------------------------------------------------------------------------
+-- User Interface & Configuration Menu
+--------------------------------------------------------------------------------
+
+function Sink:addToMainMenu(menu_items)
+    menu_items.sink_sync = {
+        text = _("Sink Progress Sync"),
+        sub_item_table = self:getMenuTable(),
+    }
+end
+
+function Sink:getMenuTable()
+    return {
+        {
+            text = _("Sync Now"),
+            keep_menu_open = false,
+            callback = function()
+                -- Explicit user action: OK to connect to Wi-Fi if offline
+                NetworkMgr:runWhenOnline(function()
+                    UIManager:show(Notification:new{ text = _("Syncing with Sink server...") })
+                    self:_syncDocument(true)
+                end)
+            end,
+        },
+        {
+            text = _("Auto-Sync on Read/Close/Sleep"),
+            checked_func = function()
+                return self.settings.auto_sync
+            end,
+            callback = function()
+                self.settings.auto_sync = not self.settings.auto_sync
+                self:saveSettings()
+            end,
+        },
+        {
+            text = _("Server URL"),
+            subtext_func = function()
+                return self.settings.server_url
+            end,
+            callback = function()
+                self:showInputDialog(_("Server URL"), self.settings.server_url, function(val)
+                    self.settings.server_url = cleanUrl(val)
+                    self:saveSettings()
+                end)
+            end,
+        },
+        {
+            text = _("Username"),
+            subtext_func = function()
+                return (self.settings.username ~= "" and self.settings.username) or _("Not set")
+            end,
+            callback = function()
+                self:showInputDialog(_("Username"), self.settings.username, function(val)
+                    self.settings.username = trim(val)
+                    self:saveSettings()
+                end)
+            end,
+        },
+        {
+            text = _("User Key / Password"),
+            subtext_func = function()
+                return (self.settings.userkey ~= "" and "••••••••") or _("Not set")
+            end,
+            callback = function()
+                self:showInputDialog(_("User Key / Password"), self.settings.userkey, function(val)
+                    self.settings.userkey = trim(val)
+                    self:saveSettings()
+                end)
+            end,
+        },
+        {
+            text = _("Test Connection / Login"),
+            keep_menu_open = false,
+            callback = function()
+                NetworkMgr:runWhenOnline(function()
+                    self:testConnection()
+                end)
+            end,
+        },
+        {
+            text = _("Register New Account"),
+            keep_menu_open = false,
+            callback = function()
+                NetworkMgr:runWhenOnline(function()
+                    self:registerAccount()
+                end)
+            end,
+        },
+    }
+end
+
+function Sink:showInputDialog(title, initial_value, on_confirm)
+    local dialog
+    dialog = InputDialog:new{
+        title = title,
+        input = initial_value or "",
+        buttons = {
+            {
+                text = _("Cancel"),
+                id = "close",
+                callback = function()
+                    UIManager:close(dialog)
+                end,
+            },
+            {
+                text = _("Save"),
+                is_enter_default = true,
+                callback = function()
+                    local val = dialog:getInputText()
+                    UIManager:close(dialog)
+                    if on_confirm then on_confirm(val) end
+                end,
+            },
+        },
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
+end
+
+function Sink:testConnection()
+    UIManager:show(Notification:new{ text = _("Authenticating with server...") })
+    local res, err = self:_makeRequest("GET", "/users/auth")
+    if err or not res then
+        UIManager:show(InfoMessage:new{
+            text = _("Connection failed:\n") .. tostring(err or "Unknown error"),
+        })
+        return
+    end
+
+    if res.status == 200 then
+        UIManager:show(InfoMessage:new{
+            text = _("Authentication successful!\nConnected as: ") .. tostring(self.settings.username),
+        })
+    elseif res.status == 401 then
+        UIManager:show(InfoMessage:new{
+            text = _("Authentication failed (401 Unauthorized).\nPlease check your username and user key."),
+        })
+    else
+        UIManager:show(InfoMessage:new{
+            text = string.format(_("Server returned HTTP %d:\n%s"), res.status, tostring(res.raw or "")),
+        })
+    end
+end
+
+function Sink:registerAccount()
+    if not self.settings.username or self.settings.username == "" or not self.settings.userkey or self.settings.userkey == "" then
+        UIManager:show(InfoMessage:new{
+            text = _("Please enter a username and password in settings before registering."),
+        })
+        return
+    end
+
+    local confirm
+    confirm = ConfirmBox:new{
+        text = string.format(_("Register account '%s' on %s?"), self.settings.username, self.settings.server_url),
+        ok_text = _("Register"),
+        ok_callback = function()
+            UIManager:show(Notification:new{ text = _("Registering account...") })
+            local res, err = self:_makeRequest("POST", "/users/create", {
+                username = self.settings.username,
+                password = self.settings.userkey,
+            })
+
+            if err or not res then
+                UIManager:show(InfoMessage:new{
+                    text = _("Registration failed:\n") .. tostring(err or "Network error"),
+                })
+                return
+            end
+
+            if res.status == 201 then
+                UIManager:show(InfoMessage:new{
+                    text = _("Account successfully registered!\nYou can now sync reading progress across your devices."),
+                })
+            elseif res.status == 402 or (res.body and res.body.code == 2002) then
+                UIManager:show(InfoMessage:new{
+                    text = _("This username is already registered on the server.\nTry logging in with 'Test Connection' instead."),
+                })
+            else
+                UIManager:show(InfoMessage:new{
+                    text = string.format(_("Registration failed (HTTP %d):\n%s"), res.status, tostring(res.raw or "")),
+                })
+            end
+        end,
+    }
+    UIManager:show(confirm)
+end
+
+return Sink
