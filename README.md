@@ -59,7 +59,7 @@ npm run dev             # Start local development server
 ### 2. KOReader Plugin Installation
 1. Copy the [`sink.koplugin`](./sink.koplugin) folder to your device's `koreader/plugins/` directory.
 2. Restart KOReader.
-3. Open the top menu &rarr; **Sink Progress Sync** &rarr; **Pair Device (Phone / PC)**.
+3. Open the top menu &rarr; **Tools** &rarr; **Sink** &rarr; **Pair Device (Phone / PC)**.
 4. Open your Worker URL on your phone or PC, enter the 6-character code, and tap **Connect E-Reader**.
 5. Your device is now connected and reading progress will sync automatically!
 

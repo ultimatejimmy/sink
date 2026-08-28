@@ -384,7 +384,7 @@ end
 function Sink:addToMainMenu(menu_items)
     menu_items.sink_sync = {
         sorting_hint = "tools",
-        text = _("Sink Progress Sync"),
+        text = _("Sink"),
         sub_item_table = self:getMenuTable(),
     }
 end

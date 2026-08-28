@@ -25,7 +25,7 @@ Non-intrusive, zero-password reading progress synchronization plugin for [KORead
 
 ## Pairing & Setup
 
-1. In KOReader, tap the top menu &rarr; **Sink Progress Sync** &rarr; **Pair Device (Phone / PC)**.
+1. In KOReader, tap the top menu &rarr; **Tools** &rarr; **Sink** &rarr; **Pair Device (Phone / PC)**.
 2. An e-ink friendly pairing screen will display your server link and a 6-character code (e.g. `K9X 2P4`).
 3. Open the link on your phone or computer, enter the code, and tap **Connect E-Reader**.
 4. KOReader will automatically detect the confirmation, save your credentials, and activate sync!

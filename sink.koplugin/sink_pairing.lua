@@ -122,7 +122,7 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
         )
 
         self.dialog = ButtonDialog:new{
-            title = _("Sink Device Pairing"),
+            title = _("Sink"),
             text = dialog_text,
             buttons = {
                 {

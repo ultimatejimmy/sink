@@ -105,7 +105,7 @@ app.get("/", async (c) => {
 <body>
   <div class="card">
     <div class="header">
-      <h1>Sink Progress Sync</h1>
+      <h1>Sink</h1>
       <span class="badge">● Online</span>
     </div>
 
@@ -115,7 +115,7 @@ app.get("/", async (c) => {
 
     <div class="step-title">Enter Pairing Code</div>
     <p class="step-desc">
-      On your Kindle / KOReader device, tap <strong>Sink Progress Sync &rarr; Pair Device</strong> to see your 6-character code.
+      On your Kindle / KOReader device, tap <strong>Tools &rarr; Sink &rarr; Pair Device</strong> to see your 6-character code.
     </p>
 
     <form id="pairForm">
