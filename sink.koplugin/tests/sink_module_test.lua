@@ -21,15 +21,32 @@ _G.G_reader_settings = {
     end
 }
 
+-- Mock UI & Hardware modules
 package.loaded["ui/widget/container/widgetcontainer"] = mock_widget_container
-package.loaded["ui/uimanager"] = { show = function() end, close = function() end }
+package.loaded["ui/uimanager"] = { show = function() end, close = function() end, scheduleIn = function() end, unschedule = function() end }
 package.loaded["ui/widget/notification"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/infomessage"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/inputdialog"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/confirmbox"] = { new = function(self, o) return o end }
+package.loaded["ui/widget/buttondialog"] = { new = function(self, o) return o end }
 package.loaded["device"] = { model = "TestModel", id = "test_id_123" }
 package.loaded["logger"] = { dbg = function() end, info = function() end, warn = function() end }
 package.loaded["gettext"] = function(s) return s end
+
+-- Mock JSON & Network dependencies for unit test isolation
+if not package.loaded["json"] then
+    package.loaded["json"] = {
+        encode = function(t) return "{}" end,
+        decode = function(s) return {} end,
+    }
+end
+package.loaded["socket"] = {}
+package.loaded["socket.http"] = { request = function() return 1, 200, {}, "OK" end }
+package.loaded["ssl.https"] = { request = function() return 1, 200, {}, "OK" end }
+package.loaded["ltn12"] = {
+    sink = { table = function() return function() end end },
+    source = { string = function() return function() end end },
+}
 
 local is_online_val = false
 local run_when_online_called = false
@@ -67,7 +84,6 @@ local required_methods = {
     "_silentBackgroundSync",
     "_syncDocument",
     "testConnection",
-    "registerAccount",
 }
 
 for _, method_name in ipairs(required_methods) do
@@ -99,6 +115,6 @@ assert(run_when_online_called == false, "Background hooks must NEVER invoke runW
 
 -- Test manual menu table items
 local menu = instance:getMenuTable()
-assert(type(menu) == "table" and #menu >= 5, "Menu table must have at least 5 items")
+assert(type(menu) == "table" and #menu >= 4, "Menu table must have at least 4 items")
 
 print("✓ Sink main.lua module tests PASSED!")

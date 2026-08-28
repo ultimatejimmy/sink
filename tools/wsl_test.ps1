@@ -50,7 +50,7 @@ function Run-Workflow {
     
     # Test 1: _meta.lua verification
     Write-Host "Running _meta.lua verification test..."
-    $MetaTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' ./luajit {0}/tests/sink_meta_test.lua" -f $WSLDest
+    $MetaTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit {0}/tests/sink_meta_test.lua" -f $WSLDest
     wsl bash -c `"$MetaTestCmd`"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Meta Tests FAILED." -ForegroundColor Red
@@ -59,7 +59,7 @@ function Run-Workflow {
 
     # Test 2: main.lua module verification
     Write-Host "Running main.lua plugin logic tests..."
-    $ModuleTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' ./luajit {0}/tests/sink_module_test.lua" -f $WSLDest
+    $ModuleTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit {0}/tests/sink_module_test.lua" -f $WSLDest
     wsl bash -c `"$ModuleTestCmd`"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Plugin Module Tests FAILED." -ForegroundColor Red
