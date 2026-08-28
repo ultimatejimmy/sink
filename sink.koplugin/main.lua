@@ -349,8 +349,41 @@ end
 -- User Interface & Configuration Menu
 --------------------------------------------------------------------------------
 
+local Dispatcher = nil
+pcall(function() Dispatcher = require("dispatcher") end)
+
+function Sink:onDispatcherRegisterActions()
+    if Dispatcher then
+        Dispatcher:registerAction("sink_sync_now", {
+            category = "none",
+            event = "SinkSyncNow",
+            title = _("Sink: Sync Now"),
+            general = true,
+        })
+        Dispatcher:registerAction("sink_pair", {
+            category = "none",
+            event = "SinkPair",
+            title = _("Sink: Pair Device"),
+            general = true,
+        })
+    end
+end
+
+function Sink:onSinkSyncNow()
+    self:_syncDocument(true)
+end
+
+function Sink:onSinkPair()
+    if SinkPairing then
+        SinkPairing:startPairing(self, function()
+            self:_syncDocument(true)
+        end)
+    end
+end
+
 function Sink:addToMainMenu(menu_items)
     menu_items.sink_sync = {
+        sorting_hint = "tools",
         text = _("Sink Progress Sync"),
         sub_item_table = self:getMenuTable(),
     }
