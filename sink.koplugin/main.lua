@@ -496,13 +496,17 @@ function Sink:getMenuTable()
         },
         {
             text = _("Server URL"),
+            keep_menu_open = true,
             subtext_func = function()
                 return self.settings.server_url
             end,
-            callback = function()
+            callback = function(touch_menu_instance)
                 self:showInputDialog(_("Server URL"), self.settings.server_url, function(val)
                     self.settings.server_url = cleanUrl(val)
                     self:saveSettings()
+                    if touch_menu_instance and touch_menu_instance.updateItems then
+                        pcall(function() touch_menu_instance:updateItems() end)
+                    end
                 end)
             end,
         },

@@ -1,8 +1,16 @@
 local UIManager = require("ui/uimanager")
 local InfoMessage = require("ui/widget/infomessage")
-local ConfirmBox = require("ui/widget/confirmbox")
+local ButtonDialog = require("ui/widget/buttondialog")
 local Notification = require("ui/widget/notification")
 local NetworkMgr = require("ui/network/manager")
+local Device = require("device")
+local Screen = Device.screen
+local Size = require("ui/size")
+local Font = require("ui/font")
+local VerticalGroup = require("ui/widget/verticalgroup")
+local TextWidget = require("ui/widget/textwidget")
+local VerticalSpan = require("ui/widget/verticalspan")
+local CenterContainer = require("ui/widget/container/centercontainer")
 local json = require("json")
 local socket = require("socket")
 local http = require("socket.http")
@@ -16,6 +24,7 @@ local SinkPairing = {
     session_id = nil,
     poll_timer = nil,
     is_pairing = false,
+    poll_count = 0,
 }
 
 local function cleanUrl(url)
@@ -28,7 +37,7 @@ local function cleanUrl(url)
 end
 
 local function httpRequest(url, method, headers, request_body, timeout)
-    timeout = timeout or 10
+    timeout = timeout or 8
     local is_https = url:match("^https://") ~= nil
     local request_fn = is_https and https.request or http.request
 
@@ -65,6 +74,7 @@ end
 
 function SinkPairing:stop()
     self.is_pairing = false
+    self.session_id = nil
     if self.poll_timer then
         UIManager:unschedule(self.poll_timer)
         self.poll_timer = nil
@@ -109,86 +119,142 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
             return
         end
 
-        self.session_id = sess_data.session_id
+        local session_id = sess_data.session_id
+        self.session_id = session_id
         self.is_pairing = true
+        self.poll_count = 0
 
         -- Format code with spaces for crystal clarity on e-ink (e.g. "K 9 X   2 P 4")
-        local raw_code = self.session_id
+        local raw_code = session_id
         local formatted_code = string.format("%s %s %s   %s %s %s",
             raw_code:sub(1,1), raw_code:sub(2,2), raw_code:sub(3,3),
             raw_code:sub(4,4), raw_code:sub(5,5), raw_code:sub(6,6)
         )
 
-        -- 2. Show Pairing Dialog on E-Reader Screen
-        local dialog_text = string.format(
-            _("PAIR YOUR DEVICE\n\n1. On Phone or PC, open:\n%s\n\n2. Enter Code:\n%s\n\n(Waiting for confirmation...)"),
-            server_url,
-            formatted_code
-        )
+        -- 2. Build Clean E-Ink UI Card using ButtonDialog + VerticalGroup
+        local dialog_width = math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.85)
+        local base_fs = 20
+        pcall(function()
+            if Size and Size.font and Size.font.default then base_fs = Size.font.default end
+        end)
 
-        self.dialog = ConfirmBox:new{
-            text = dialog_text,
-            ok_text = _("Cancel"),
-            ok_callback = function()
-                self:stop()
-            end,
+        local vg_components = {
+            VerticalSpan:new{ width = Size.span.horizontal_large or 15 },
+            CenterContainer:new{
+                dimen = { w = dialog_width, h = 30 },
+                TextWidget:new{
+                    text = _("PAIR YOUR DEVICE"),
+                    face = Font:getFace("cfont", math.floor(base_fs * 1.1)),
+                    bold = true,
+                },
+            },
+            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
+            TextWidget:new{
+                text = _("1. On Phone or PC, open:"),
+                face = Font:getFace("cfont", base_fs),
+                padding = 5,
+            },
+            TextWidget:new{
+                text = server_url,
+                face = Font:getFace("cfont", math.floor(base_fs * 0.95)),
+                bold = true,
+                padding = 5,
+            },
+            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
+            TextWidget:new{
+                text = _("2. Enter Code:"),
+                face = Font:getFace("cfont", base_fs),
+                padding = 5,
+            },
+            CenterContainer:new{
+                dimen = { w = dialog_width, h = 45 },
+                TextWidget:new{
+                    text = "[ " .. formatted_code .. " ]",
+                    face = Font:getFace("cfont", math.floor(base_fs * 1.4)),
+                    bold = true,
+                },
+            },
+            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
+            CenterContainer:new{
+                dimen = { w = dialog_width, h = 25 },
+                TextWidget:new{
+                    text = _("(Waiting for confirmation...)"),
+                    face = Font:getFace("cfont", math.floor(base_fs * 0.85)),
+                },
+            },
+            VerticalSpan:new{ width = Size.span.horizontal_large or 15 },
+        }
+
+        local vg = VerticalGroup:new(vg_components)
+
+        self.dialog = ButtonDialog:new{
+            _added_widgets = { vg },
+            buttons = {
+                {
+                    {
+                        text = _("Cancel"),
+                        is_enter_default = true,
+                        callback = function()
+                            self:stop()
+                        end,
+                    },
+                },
+            },
         }
         UIManager:show(self.dialog)
 
-        -- 3. Poll for pairing confirmation
-        local poll_fn
-        local poll_count = 0
-        local max_polls = 150 -- 5 minutes max
-
-        poll_fn = function()
-            if not self.is_pairing then return end
-            poll_count = poll_count + 1
-
-            if poll_count > max_polls then
-                self:stop()
-                UIManager:show(InfoMessage:new{
-                    text = _("Pairing session timed out. Please try again."),
-                })
-                return
-            end
-
-            local poll_url = server_url .. "/api/session/" .. raw_code .. "/poll"
-            local poll_ok, poll_code, poll_resp = httpRequest(poll_url, "GET", {}, nil, 5)
-
-            if poll_ok and poll_code == 200 and poll_resp and #poll_resp > 0 then
-                local data = nil
-                pcall(function() data = json.decode(poll_resp) end)
-
-                if data and data.status == "ready" and data.username and data.userkey then
-                    -- Success! Apply credentials
-                    self:stop()
-                    sink_plugin.settings.username = data.username
-                    sink_plugin.settings.userkey = data.userkey
-                    sink_plugin:saveSettings()
-
-                    UIManager:show(InfoMessage:new{
-                        text = string.format(_("✓ E-Reader Paired Successfully!\n\nConnected as: %s\nReading progress will now sync automatically."), data.username),
-                        timeout = 6,
-                    })
-
-                    if on_complete then
-                        pcall(on_complete)
-                    end
-                    return
-                end
-            end
-
-            -- Schedule next poll in 2 seconds
-            if self.is_pairing then
-                self.poll_timer = function() poll_fn() end
-                UIManager:scheduleIn(2, self.poll_timer)
-            end
-        end
-
-        -- Start initial poll after 2 seconds
-        self.poll_timer = function() poll_fn() end
-        UIManager:scheduleIn(2, self.poll_timer)
+        -- 3. Start Polling Loop
+        self:pollSession(server_url, session_id, sink_plugin, on_complete)
     end)
+end
+
+function SinkPairing:pollSession(server_url, session_id, sink_plugin, on_complete)
+    if not self.is_pairing or self.session_id ~= session_id then return end
+
+    self.poll_count = (self.poll_count or 0) + 1
+    if self.poll_count > 150 then -- 5 minutes max
+        self:stop()
+        UIManager:show(InfoMessage:new{
+            text = _("Pairing session timed out. Please try again."),
+        })
+        return
+    end
+
+    local poll_url = server_url .. "/api/session/" .. session_id .. "/poll"
+    local poll_ok, poll_code, poll_resp = httpRequest(poll_url, "GET", {}, nil, 4)
+
+    if not self.is_pairing or self.session_id ~= session_id then return end
+
+    if poll_ok and poll_code == 200 and poll_resp and #poll_resp > 0 then
+        local data = nil
+        pcall(function() data = json.decode(poll_resp) end)
+
+        if data and data.status == "ready" and data.username and data.userkey then
+            -- Success! Apply credentials immediately
+            self:stop()
+            sink_plugin.settings.username = data.username
+            sink_plugin.settings.userkey = data.userkey
+            sink_plugin:saveSettings()
+
+            UIManager:show(InfoMessage:new{
+                text = string.format(_("✓ E-Reader Paired Successfully!\n\nConnected as: %s\nReading progress will now sync automatically."), data.username),
+                timeout = 6,
+            })
+
+            if on_complete then
+                pcall(on_complete)
+            end
+            return
+        end
+    end
+
+    -- Reschedule next poll asynchronously after 1.5 seconds
+    if self.is_pairing and self.session_id == session_id then
+        self.poll_timer = function()
+            self:pollSession(server_url, session_id, sink_plugin, on_complete)
+        end
+        UIManager:scheduleIn(1.5, self.poll_timer)
+    end
 end
 
 return SinkPairing
