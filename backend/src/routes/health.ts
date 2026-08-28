@@ -7,7 +7,7 @@ healthRouter.get("/health", (c) => {
   return c.json({
     status: "ok",
     state: "OK",
-    service: "koreader-sync-server",
+    service: "sink",
     timestamp: Math.floor(Date.now() / 1000),
   });
 });

@@ -21,7 +21,7 @@ local Sink = WidgetContainer:extend{
 
 -- Default Configuration
 local DEFAULT_SETTINGS = {
-    server_url = "https://your-sink-worker.workers.dev",
+    server_url = "https://sink.your-subdomain.workers.dev",
     username = "",
     userkey = "",
     auto_sync = true,

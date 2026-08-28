@@ -35,7 +35,7 @@ A non-intrusive, battery-friendly reading progress synchronization plugin for [K
 ## Configuration
 
 1. Open the KOReader main menu (top menu bar) and select **Sink Progress Sync**.
-2. Tap **Server URL** and enter your deployed backend URL (e.g. `https://koreader-sync-server.your-subdomain.workers.dev`).
+2. Tap **Server URL** and enter your deployed backend URL (e.g. `https://sink.your-subdomain.workers.dev`).
 3. Tap **Username** and enter your chosen username.
 4. Tap **User Key / Password** and enter your password or secret key.
 5. Tap **Register New Account** (if creating an account for the first time) or **Test Connection / Login**.
