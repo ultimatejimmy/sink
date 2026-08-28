@@ -462,22 +462,28 @@ function Sink:showInputDialog(title, initial_value, on_confirm)
     dialog = InputDialog:new{
         title = title,
         input = initial_value or "",
+        save_callback = function(val)
+            UIManager:close(dialog)
+            if on_confirm then on_confirm(val) end
+        end,
         buttons = {
             {
-                text = _("Cancel"),
-                id = "close",
-                callback = function()
-                    UIManager:close(dialog)
-                end,
-            },
-            {
-                text = _("Save"),
-                is_enter_default = true,
-                callback = function()
-                    local val = dialog:getInputText()
-                    UIManager:close(dialog)
-                    if on_confirm then on_confirm(val) end
-                end,
+                {
+                    text = _("Cancel"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(dialog)
+                    end,
+                },
+                {
+                    text = _("Save"),
+                    is_enter_default = true,
+                    callback = function()
+                        local val = dialog:getInputText()
+                        UIManager:close(dialog)
+                        if on_confirm then on_confirm(val) end
+                    end,
+                },
             },
         },
     }
