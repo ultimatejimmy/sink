@@ -381,7 +381,38 @@ function Sink:onSinkPair()
     end
 end
 
+local function injectSinkIntoToolsMenu()
+    local menu_orders = {
+        "ui/elements/reader_menu_order",
+        "ui/elements/filemanager_menu_order",
+    }
+    local function isItemInOrder(tbl, target_id)
+        if type(tbl) ~= "table" then return false end
+        for _, val in pairs(tbl) do
+            if val == target_id then
+                return true
+            elseif type(val) == "table" then
+                if isItemInOrder(val, target_id) then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    for _, order_path in ipairs(menu_orders) do
+        local ok, order = pcall(require, order_path)
+        if ok and type(order) == "table" and type(order.tools) == "table" then
+            if not isItemInOrder(order, "sink_sync") then
+                local insert_idx = math.min(4, #order.tools + 1)
+                table.insert(order.tools, insert_idx, "sink_sync")
+            end
+        end
+    end
+end
+
 function Sink:addToMainMenu(menu_items)
+    injectSinkIntoToolsMenu()
     menu_items.sink_sync = {
         sorting_hint = "tools",
         text = _("Sink"),
