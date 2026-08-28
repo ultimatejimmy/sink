@@ -5,13 +5,10 @@
   "main": "backend/src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "npm --prefix backend test",
     "build": "npm --prefix backend run build",
+    "test": "npm --prefix backend test",
     "d1:init:local": "wrangler d1 execute DB --local --file=./migrations/0001_init.sql",
-    "d1:init:remote": "wrangler d1 execute DB --remote --file=./migrations/0001_init.sql",
-    "d1:migrate:local": "wrangler d1 migrations apply DB --local",
-    "d1:migrate:remote": "wrangler d1 migrations apply DB --remote"
+    "d1:init:remote": "wrangler d1 execute DB --remote --file=./migrations/0001_init.sql"
   },
   "dependencies": {
     "hono": "^4.7.4"
