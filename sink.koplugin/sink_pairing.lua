@@ -37,23 +37,30 @@ local function httpRequest(url, method, headers, request_body, timeout)
     if request_body and #request_body > 0 then
         req_headers["Content-Length"] = tostring(#request_body)
     end
-
-    local ok, code, resp_headers = pcall(function()
-        return request_fn{
-            url = url,
-            method = method or "GET",
-            headers = req_headers,
-            source = request_body and ltn12.source.string(request_body) or nil,
-            sink = ltn12.sink.table(response_body),
-            timeout = timeout,
-        }
-    end)
-
-    if not ok then
-        return false, nil, tostring(code)
+    if not req_headers["User-Agent"] then
+        req_headers["User-Agent"] = "Mozilla/5.0 (compatible; KOReader-Sink/1.0)"
     end
 
-    return true, tonumber(code) or code, table.concat(response_body)
+    local req_table = {
+        url = url,
+        method = method or "GET",
+        headers = req_headers,
+        source = request_body and ltn12.source.string(request_body) or nil,
+        sink = ltn12.sink.table(response_body),
+        timeout = timeout,
+    }
+
+    local ok, code, resp_headers, status
+    local pcall_ok, pcall_err = pcall(function()
+        ok, code, resp_headers, status = request_fn(req_table)
+    end)
+
+    if not pcall_ok then
+        return false, nil, tostring(pcall_err)
+    end
+
+    local resp_text = table.concat(response_body)
+    return ok ~= nil, tonumber(code) or code, resp_text
 end
 
 function SinkPairing:stop()

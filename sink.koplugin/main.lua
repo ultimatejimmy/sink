@@ -94,8 +94,9 @@ function Sink:_makeRequest(method, endpoint, body_table)
     local protocol = url:match("^(https?)://")
     local request_fn = (protocol == "https") and https.request or http.request
 
-    local ok, code, resp_headers, status_line = pcall(function()
-        return request_fn{
+    local ok, code, resp_headers, status_line
+    local pcall_ok, pcall_err = pcall(function()
+        ok, code, resp_headers, status_line = request_fn{
             url = url,
             method = method,
             headers = headers,
@@ -105,8 +106,8 @@ function Sink:_makeRequest(method, endpoint, body_table)
         }
     end)
 
-    if not ok then
-        return nil, "Network error: " .. tostring(code)
+    if not pcall_ok then
+        return nil, "Network error: " .. tostring(pcall_err)
     end
 
     local raw_res = table.concat(response_body)
@@ -116,7 +117,7 @@ function Sink:_makeRequest(method, endpoint, body_table)
     end
 
     return {
-        status = code or 0,
+        status = tonumber(code) or code or 0,
         headers = resp_headers or {},
         body = decoded or {},
         raw = raw_res,
