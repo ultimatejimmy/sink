@@ -1,6 +1,6 @@
 # Sink: Private KOReader Progress Sync Solution
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink)
+<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink" target="_blank" rel="noopener noreferrer"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" /></a>
 
 A complete, private reading progress synchronization solution for [KOReader](https://koreader.rocks/) on Kindle, Kobo, Android, and other e-readers, powered by a serverless **Cloudflare Worker** backend (Hono + Cloudflare D1) and a **non-intrusive KOReader Lua plugin**.
 
@@ -40,9 +40,9 @@ flowchart LR
 
 ## 1-Click Backend Deployment
 
-Click the button below to deploy the backend to Cloudflare Workers:
+Click the button below to deploy the backend to Cloudflare Workers in a new tab:
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink)
+<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink" target="_blank" rel="noopener noreferrer"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" /></a>
 
 ---
 

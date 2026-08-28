@@ -1,6 +1,6 @@
 # Sink Backend (Cloudflare Workers + D1)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink)
+<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink" target="_blank" rel="noopener noreferrer"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" /></a>
 
 A high-performance, serverless, self-hosted [KOReader](https://koreader.rocks/) reading progress synchronization backend implemented with [Hono](https://hono.dev/), TypeScript, and [Cloudflare D1](https://developers.cloudflare.com/d1/).
 
@@ -19,9 +19,9 @@ A high-performance, serverless, self-hosted [KOReader](https://koreader.rocks/) 
 
 ## 1-Click Deployment
 
-Click the button below to deploy this backend directly to your Cloudflare account:
+Click the button below to deploy this backend directly to your Cloudflare account in a new tab:
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink)
+<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ultimatejimmy/sink" target="_blank" rel="noopener noreferrer"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" /></a>
 
 ---
 
@@ -69,7 +69,7 @@ npm test
 
 ```bash
 # 1. Create remote D1 database
-npx wrangler d1 create koreader_sync_db
+npx wrangler d1 create sink_db
 
 # 2. Deploy Worker
 npm run deploy

@@ -5,6 +5,6 @@ compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "koreader_sync_db"
+database_name = "sink_db"
 database_id = ""
 migrations_dir = "migrations"
