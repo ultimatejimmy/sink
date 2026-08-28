@@ -10,23 +10,23 @@ A complete, private reading progress synchronization solution for [KOReader](htt
 
 ```mermaid
 flowchart LR
-    subgraph Device ["Kindle / KOReader Device"]
+    subgraph Device [Kindle / KOReader Device]
         direction TB
-        Hook["Lifecycle Hooks<br/>(Ready, Close, Suspend)"] -->|"NetworkMgr:isOnline()"| Check{"Is Online?"}
-        Check -->|Yes| SilentSync["Silent Background Sync"]
-        Check -->|No| Skip["Silently Skip<br/>(No Wi-Fi Popup)"]
-        User["User 'Sync Now' Tap"] -->|"NetworkMgr:runWhenOnline()"| ManualSync["Prompt Wi-Fi & Sync"]
+        Hook[Lifecycle Hooks] --> Check{Device Online?}
+        Check -->|Yes| SilentSync[Silent Background Sync]
+        Check -->|No| Skip[Skip Sync - No Popups]
+        User[User Sync Now Tap] --> ManualSync[Prompt Wifi and Sync]
     end
 
-    subgraph Edge ["Cloudflare Edge Network"]
+    subgraph Edge [Cloudflare Edge Network]
         direction TB
-        Worker["Hono Worker<br/>(Kosync REST API)"]
-        D1[("Cloudflare D1<br/>SQLite Database")]
-        Worker -->|"Queries & Upserts"| D1
+        Worker[Hono Worker API]
+        D1[(Cloudflare D1 Database)]
+        Worker --> D1
     end
 
-    SilentSync -->|"HTTPS /syncs/progress"| Worker
-    ManualSync -->|"HTTPS /syncs/progress"| Worker
+    SilentSync -->|HTTPS Request| Worker
+    ManualSync -->|HTTPS Request| Worker
 ```
 
 ---
