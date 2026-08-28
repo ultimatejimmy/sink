@@ -1,0 +1,46 @@
+name: Auto-Sync Upstream Updates
+
+on:
+  schedule:
+    # Run every day at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  sync:
+    name: Sync with Upstream Template
+    runs-on: ubuntu-latest
+    # Skip if running on the upstream repository itself
+    if: github.repository != 'ultimatejimmy/sink'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and Merge Upstream Changes
+        run: |
+          echo "Adding upstream remote..."
+          git remote add upstream https://github.com/ultimatejimmy/sink.git || git remote set-url upstream https://github.com/ultimatejimmy/sink.git
+          git fetch upstream main
+
+          echo "Attempting fast-forward merge..."
+          if git merge --ff-only upstream/main; then
+            echo "Fast-forward merge successful."
+          else
+            echo "Fast-forward not possible, performing automatic merge with upstream precedence..."
+            git merge -X theirs upstream/main --allow-unrelated-histories -m "chore(sync): automated sync with upstream template"
+          fi
+
+          echo "Pushing latest updates to origin..."
+          git push origin main
