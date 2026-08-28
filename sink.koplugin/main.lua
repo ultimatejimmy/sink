@@ -20,6 +20,13 @@ pcall(function()
     SinkPairing = require(plugin_path .. "sink_pairing")
 end)
 
+local DataStorage = nil
+local LuaSettings = nil
+pcall(function()
+    DataStorage = require("datastorage")
+    LuaSettings = require("luasettings")
+end)
+
 local Sink = WidgetContainer:extend{
     name = "sink",
     is_doc_only = false,
@@ -40,8 +47,24 @@ function Sink:init()
     self:loadSettings()
 end
 
+function Sink:getSettingsPath()
+    local dir = (DataStorage and DataStorage.getDataDir and DataStorage:getDataDir()) or "."
+    return dir .. "/sink_settings.lua"
+end
+
 function Sink:loadSettings()
-    self.settings = G_reader_settings:readSetting("sink_sync") or {}
+    local loaded = nil
+    if LuaSettings then
+        local ok, storage = pcall(function() return LuaSettings:open(self:getSettingsPath()) end)
+        if ok and storage then
+            self.settings_storage = storage
+            loaded = storage:readSetting("sink_sync")
+        end
+    end
+    if not loaded and _G.G_reader_settings then
+        loaded = G_reader_settings:readSetting("sink_sync")
+    end
+    self.settings = loaded or {}
     for k, v in pairs(DEFAULT_SETTINGS) do
         if self.settings[k] == nil then
             self.settings[k] = v
@@ -50,7 +73,21 @@ function Sink:loadSettings()
 end
 
 function Sink:saveSettings()
-    G_reader_settings:saveSetting("sink_sync", self.settings)
+    if not self.settings_storage and LuaSettings then
+        pcall(function()
+            self.settings_storage = LuaSettings:open(self:getSettingsPath())
+        end)
+    end
+    if self.settings_storage then
+        self.settings_storage:saveSetting("sink_sync", self.settings)
+        pcall(function() self.settings_storage:flush() end)
+    end
+    if _G.G_reader_settings then
+        G_reader_settings:saveSetting("sink_sync", self.settings)
+        if G_reader_settings.flush then
+            pcall(function() G_reader_settings:flush() end)
+        end
+    end
 end
 
 --------------------------------------------------------------------------------

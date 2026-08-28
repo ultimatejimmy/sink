@@ -1,6 +1,6 @@
 local UIManager = require("ui/uimanager")
 local InfoMessage = require("ui/widget/infomessage")
-local ButtonDialog = require("ui/widget/buttondialog")
+local ConfirmBox = require("ui/widget/confirmbox")
 local Notification = require("ui/widget/notification")
 local NetworkMgr = require("ui/network/manager")
 local json = require("json")
@@ -119,29 +119,19 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
             raw_code:sub(4,4), raw_code:sub(5,5), raw_code:sub(6,6)
         )
 
-        local web_url = server_url .. "/?s=" .. raw_code
-
         -- 2. Show Pairing Dialog on E-Reader Screen
         local dialog_text = string.format(
-            _("PAIR YOUR DEVICE\n\n1. On your Phone or PC, open:\n%s\n\n2. Enter Code:\n%s\n\n(Waiting for confirmation...)"),
+            _("PAIR YOUR DEVICE\n\n1. On Phone or PC, open:\n%s\n\n2. Enter Code:\n%s\n\n(Waiting for confirmation...)"),
             server_url,
             formatted_code
         )
 
-        self.dialog = ButtonDialog:new{
-            title = _("Sink"),
+        self.dialog = ConfirmBox:new{
             text = dialog_text,
-            buttons = {
-                {
-                    {
-                        text = _("Cancel"),
-                        id = "cancel",
-                        callback = function()
-                            self:stop()
-                        end,
-                    },
-                },
-            },
+            ok_text = _("Cancel"),
+            ok_callback = function()
+                self:stop()
+            end,
         }
         UIManager:show(self.dialog)
 
