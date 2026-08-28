@@ -4,34 +4,44 @@ let isInitialized = false;
 
 /**
  * Self-bootstraps D1 schema on first run with zero manual SQL commands needed.
+ * Uses db.batch() with prepared statements for 100% reliability across D1 runtimes.
  */
 export async function ensureDatabase(db: D1Database): Promise<void> {
+  if (!db) {
+    throw new Error("D1 database binding 'DB' is not configured in Worker environment.");
+  }
   if (isInitialized) return;
+
   try {
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password_hash TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS progress (
-        username TEXT NOT NULL,
-        document_hash TEXT NOT NULL,
-        percentage REAL NOT NULL,
-        progress TEXT NOT NULL,
-        device TEXT NOT NULL,
-        device_id TEXT,
-        timestamp INTEGER NOT NULL,
-        PRIMARY KEY (username, document_hash),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username);
-    `);
+    await db.batch([
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS users (
+          username TEXT PRIMARY KEY,
+          password_hash TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `),
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS progress (
+          username TEXT NOT NULL,
+          document_hash TEXT NOT NULL,
+          percentage REAL NOT NULL,
+          progress TEXT NOT NULL,
+          device TEXT NOT NULL,
+          device_id TEXT,
+          timestamp INTEGER NOT NULL,
+          PRIMARY KEY (username, document_hash),
+          FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        )
+      `),
+      db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username)
+      `),
+    ]);
     isInitialized = true;
   } catch (err) {
-    console.warn("Database initialization check warning:", err);
+    console.error("Database batch bootstrap error:", err);
+    throw err;
   }
 }
 

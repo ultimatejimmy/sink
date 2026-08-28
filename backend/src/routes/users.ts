@@ -50,31 +50,42 @@ usersRouter.post("/create", async (c) => {
     );
   }
 
-  const existingUser = await getUserByUsername(c.env.DB, username);
-  if (existingUser) {
-    return c.json(
-      {
-        code: KosyncErrors.USER_EXISTS.code,
-        message: KosyncErrors.USER_EXISTS.message,
-      },
-      KosyncErrors.USER_EXISTS.status
-    );
-  }
+  try {
+    const existingUser = await getUserByUsername(c.env.DB, username);
+    if (existingUser) {
+      return c.json(
+        {
+          code: KosyncErrors.USER_EXISTS.code,
+          message: KosyncErrors.USER_EXISTS.message,
+        },
+        KosyncErrors.USER_EXISTS.status
+      );
+    }
 
-  const passwordHash = await hashPassword(password);
-  const success = await createUser(c.env.DB, username, passwordHash);
+    const passwordHash = await hashPassword(password);
+    const success = await createUser(c.env.DB, username, passwordHash);
 
-  if (!success) {
+    if (!success) {
+      return c.json(
+        {
+          code: KosyncErrors.INTERNAL.code,
+          message: "Failed to insert user into database.",
+        },
+        500
+      );
+    }
+
+    return c.json({ username }, 201);
+  } catch (err: any) {
+    console.error("User registration error:", err);
     return c.json(
       {
         code: KosyncErrors.INTERNAL.code,
-        message: KosyncErrors.INTERNAL.message,
+        message: "Database error: " + (err.message || String(err)),
       },
-      KosyncErrors.INTERNAL.status
+      500
     );
   }
-
-  return c.json({ username }, 201);
 });
 
 // Helper for auth logic (supports both GET and POST)
@@ -90,20 +101,31 @@ async function handleAuth(c: any) {
     );
   }
 
-  const isValid = await authenticate(c.env.DB, creds.username, creds.userKey);
-  if (!isValid) {
+  try {
+    const isValid = await authenticate(c.env.DB, creds.username, creds.userKey);
+    if (!isValid) {
+      return c.json(
+        {
+          code: KosyncErrors.UNAUTHORIZED.code,
+          message: KosyncErrors.UNAUTHORIZED.message,
+        },
+        KosyncErrors.UNAUTHORIZED.status
+      );
+    }
+
+    c.header("x-auth-user", creds.username);
+    c.header("x-auth-token", `token_${creds.username}_${Date.now()}`);
+    return c.json({ authorized: "OK" }, 200);
+  } catch (err: any) {
+    console.error("User authentication error:", err);
     return c.json(
       {
-        code: KosyncErrors.UNAUTHORIZED.code,
-        message: KosyncErrors.UNAUTHORIZED.message,
+        code: KosyncErrors.INTERNAL.code,
+        message: "Database error: " + (err.message || String(err)),
       },
-      KosyncErrors.UNAUTHORIZED.status
+      500
     );
   }
-
-  c.header("x-auth-user", creds.username);
-  c.header("x-auth-token", `token_${creds.username}_${Date.now()}`);
-  return c.json({ authorized: "OK" }, 200);
 }
 
 // POST /users/auth & GET /users/auth
