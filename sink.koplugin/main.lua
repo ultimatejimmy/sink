@@ -14,6 +14,11 @@ local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local _ = require("gettext")
 
+local Event = nil
+pcall(function() Event = require("ui/event") end)
+local util = nil
+pcall(function() util = require("util") end)
+
 local plugin_path = ((...) or ""):match("(.-)[^%.]+$") or ""
 local SinkPairing = nil
 pcall(function()
@@ -167,18 +172,45 @@ end
 
 function Sink:_getDocumentMD5()
     if not self.ui then return nil end
-    if self.ui.doc_settings and self.ui.doc_settings:readSetting("doc_md5") then
-        return self.ui.doc_settings:readSetting("doc_md5")
+
+    -- 1. Read partial_md5_checksum from document settings (standard KOReader key)
+    if self.ui.doc_settings then
+        local checksum = self.ui.doc_settings:readSetting("partial_md5_checksum")
+        if checksum and checksum ~= "" then
+            return checksum
+        end
+        -- Fallback check for any legacy key
+        local legacy = self.ui.doc_settings:readSetting("doc_md5") or self.ui.doc_settings:readSetting("md5")
+        if legacy and legacy ~= "" then
+            return legacy
+        end
     end
+
+    -- 2. Fallback using document object or file path
     if self.ui.document then
-        if self.ui.document.file_hash then
-            return self.ui.document.file_hash
+        if self.ui.document.fastDigest then
+            local ok, digest = pcall(function() return self.ui.document:fastDigest() end)
+            if ok and digest and digest ~= "" then
+                return digest
+            end
         end
-        if self.ui.document.getMD5 then
-            local ok, md5 = pcall(function() return self.ui.document:getMD5() end)
-            if ok and md5 then return md5 end
+        if self.ui.document.file then
+            if util and util.partialMD5 then
+                local ok, md5_val = pcall(function() return util.partialMD5(self.ui.document.file) end)
+                if ok and md5_val and md5_val ~= "" then
+                    return md5_val
+                end
+            end
+            local ok, sha2 = pcall(require, "ffi/sha2")
+            if ok and sha2 and sha2.md5 then
+                local md5_val = sha2.md5(self.ui.document.file)
+                if md5_val and md5_val ~= "" then
+                    return md5_val
+                end
+            end
         end
     end
+
     return nil
 end
 
@@ -187,24 +219,69 @@ function Sink:_getLocalProgress()
     local progress = nil
     local percentage = nil
 
-    -- Extract xpointer / bookmark progress
-    if self.ui.bookmark and self.ui.bookmark.getProgress then
-        local ok, p = pcall(function() return self.ui.bookmark:getProgress() end)
-        if ok and p then progress = p end
-    end
-    if not progress and self.ui.document and self.ui.document.getXPointer then
-        local ok, p = pcall(function() return self.ui.document:getXPointer() end)
-        if ok and p then progress = p end
-    end
-    if not progress and self.ui.paging and self.ui.paging.current_page then
-        progress = tostring(self.ui.paging.current_page)
+    local has_pages = self.ui.document.info and self.ui.document.info.has_pages
+
+    if has_pages then
+        -- Paginated document (PDF, DJVU, CBZ, etc.)
+        if self.ui.paging then
+            if self.ui.paging.getLastProgress then
+                local ok, p = pcall(function() return self.ui.paging:getLastProgress() end)
+                if ok and p then progress = tostring(p) end
+            end
+            if not progress and self.ui.paging.current_page then
+                progress = tostring(self.ui.paging.current_page)
+            end
+
+            if self.ui.paging.getLastPercent then
+                local ok, pct = pcall(function() return self.ui.paging:getLastPercent() end)
+                if ok and pct then percentage = tonumber(pct) end
+            end
+        end
+
+        if not progress and self.ui.getCurrentPage then
+            local ok, p = pcall(function() return self.ui:getCurrentPage() end)
+            if ok and p then progress = tostring(p) end
+        end
+
+        if not percentage and self.ui.document.totalPages and self.ui.document.totalPages > 0 and tonumber(progress) then
+            percentage = tonumber(progress) / self.ui.document.totalPages
+        end
+    else
+        -- Reflowable document (EPUB, MOBI, FB2, TXT, etc.)
+        if self.ui.rolling then
+            if self.ui.rolling.getLastProgress then
+                local ok, p = pcall(function() return self.ui.rolling:getLastProgress() end)
+                if ok and p then progress = tostring(p) end
+            end
+            if self.ui.rolling.getLastPercent then
+                local ok, pct = pcall(function() return self.ui.rolling:getLastPercent() end)
+                if ok and pct then percentage = tonumber(pct) end
+            end
+        end
+
+        if not progress and self.ui.doc_settings then
+            progress = self.ui.doc_settings:readSetting("last_xpointer")
+        end
+        if not progress and self.ui.bookmark and self.ui.bookmark.getProgress then
+            local ok, p = pcall(function() return self.ui.bookmark:getProgress() end)
+            if ok and p then progress = tostring(p) end
+        end
+        if not progress and self.ui.document and self.ui.document.getXPointer then
+            local ok, p = pcall(function() return self.ui.document:getXPointer() end)
+            if ok and p then progress = tostring(p) end
+        end
+        if not progress and self.ui.paging and self.ui.paging.current_page then
+            progress = tostring(self.ui.paging.current_page)
+        end
     end
 
-    -- Extract percentage
-    if self.ui.doc_settings and self.ui.doc_settings:readSetting("percent_finished") then
+    -- Extract percentage from doc_settings if not yet populated
+    if not percentage and self.ui.doc_settings then
         percentage = tonumber(self.ui.doc_settings:readSetting("percent_finished"))
-    elseif self.ui.document and self.ui.document.totalPages and self.ui.paging and self.ui.paging.current_page then
-        percentage = self.ui.paging.current_page / self.ui.document.totalPages
+    end
+
+    if not percentage and progress then
+        percentage = 0.0
     end
 
     return percentage, progress
@@ -212,10 +289,27 @@ end
 
 function Sink:_applyRemoteProgress(remote_progress, remote_percentage)
     if not self.ui or not remote_progress then return end
+
+    local has_pages = self.ui.document and self.ui.document.info and self.ui.document.info.has_pages
+
+    if Event and self.ui.handleEvent then
+        if has_pages then
+            local page = tonumber(remote_progress)
+            if page then
+                self.ui:handleEvent(Event:new("GotoPage", page))
+                return
+            end
+        else
+            self.ui:handleEvent(Event:new("GotoXPointer", tostring(remote_progress)))
+            return
+        end
+    end
+
+    -- Fallback navigation handlers
     if self.ui.bookmark and self.ui.bookmark.restoreProgress then
         pcall(function() self.ui.bookmark:restoreProgress(remote_progress) end)
     elseif self.ui.gotoXPointer then
-        pcall(function() self.ui:gotoXPointer(remote_progress) end)
+        pcall(function() self.ui:gotoXPointer(tostring(remote_progress)) end)
     elseif self.ui.gotoPage and tonumber(remote_progress) then
         pcall(function() self.ui:gotoPage(tonumber(remote_progress)) end)
     end
@@ -414,7 +508,7 @@ end
 function Sink:onSinkPair()
     if SinkPairing then
         SinkPairing:startPairing(self, function()
-            self:_syncDocument(true)
+            self:_syncDocument(false)
         end)
     end
 end
@@ -466,7 +560,7 @@ function Sink:getMenuTable()
             callback = function()
                 if SinkPairing then
                     SinkPairing:startPairing(self, function()
-                        self:_syncDocument(true)
+                        self:_syncDocument(false)
                     end)
                 else
                     UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })

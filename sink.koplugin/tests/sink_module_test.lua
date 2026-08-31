@@ -117,4 +117,67 @@ assert(run_when_online_called == false, "Background hooks must NEVER invoke runW
 local menu = instance:getMenuTable()
 assert(type(menu) == "table" and #menu >= 4, "Menu table must have at least 4 items")
 
+-- Test 1: _getDocumentMD5 with partial_md5_checksum
+local mock_doc_settings = {
+    settings = { partial_md5_checksum = "abc123md5hash" },
+    readSetting = function(self, k) return self.settings[k] end
+}
+local test_ui = {
+    doc_settings = mock_doc_settings,
+    document = {
+        file = "/path/to/book.epub",
+        info = { has_pages = false }
+    }
+}
+local test_inst = setmetatable({ ui = test_ui, settings = { username = "testuser", userkey = "testkey" } }, { __index = Sink })
+assert(test_inst:_getDocumentMD5() == "abc123md5hash", "Should extract partial_md5_checksum from doc_settings")
+
+-- Test 2: _getDocumentMD5 fallback to fastDigest
+test_ui.doc_settings.settings.partial_md5_checksum = nil
+test_ui.document.fastDigest = function(self) return "fastdigest_hash_456" end
+assert(test_inst:_getDocumentMD5() == "fastdigest_hash_456", "Should fall back to document:fastDigest()")
+
+-- Test 3: _getLocalProgress for reflowable documents
+test_ui.rolling = {
+    getLastProgress = function(self) return "/body/div[2]/p[5]" end,
+    getLastPercent = function(self) return 0.42 end,
+}
+local pct, prog = test_inst:_getLocalProgress()
+assert(pct == 0.42, "Should extract percentage from rolling:getLastPercent()")
+assert(prog == "/body/div[2]/p[5]", "Should extract progress from rolling:getLastProgress()")
+
+-- Test 4: _getLocalProgress for paged documents
+local paged_ui = {
+    document = {
+        info = { has_pages = true },
+        totalPages = 200,
+    },
+    paging = {
+        getLastProgress = function(self) return "50" end,
+        getLastPercent = function(self) return 0.25 end,
+        current_page = 50,
+    }
+}
+local paged_inst = setmetatable({ ui = paged_ui, settings = {} }, { __index = Sink })
+local paged_pct, paged_prog = paged_inst:_getLocalProgress()
+assert(paged_pct == 0.25, "Paged percentage should match")
+assert(paged_prog == "50", "Paged progress should match")
+
+-- Test 5: _applyRemoteProgress
+local handled_event = nil
+paged_ui.handleEvent = function(self, evt)
+    handled_event = evt
+end
+package.loaded["ui/event"] = {
+    new = function(self, name, arg) return { name = name, arg = arg } end
+}
+paged_inst:_applyRemoteProgress("75", 0.375)
+assert(handled_event and handled_event.name == "GotoPage" and handled_event.arg == 75, "Should dispatch GotoPage event for paged documents")
+
+test_ui.handleEvent = function(self, evt)
+    handled_event = evt
+end
+test_inst:_applyRemoteProgress("/body/div[3]", 0.5)
+assert(handled_event and handled_event.name == "GotoXPointer" and handled_event.arg == "/body/div[3]", "Should dispatch GotoXPointer event for reflowable documents")
+
 print("✓ Sink main.lua module tests PASSED!")
