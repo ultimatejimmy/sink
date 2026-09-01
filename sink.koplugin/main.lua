@@ -561,33 +561,27 @@ function Sink:addToMainMenu(menu_items)
 end
 
 function Sink:getMenuTable()
+    local is_paired = self.settings.username and self.settings.username ~= ""
+
     return {
+        -- 1. Primary Action: Instant Sync
         {
-            text = _("Pair Device (Phone / PC)"),
-            keep_menu_open = false,
-            callback = function()
-                if SinkPairing then
-                    SinkPairing:startPairing(self, function()
-                        self:_syncDocument(false)
-                    end)
-                else
-                    UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })
-                end
+            text = _("Sync Progress Now"),
+            enabled_func = function()
+                return self.settings.username ~= ""
             end,
-        },
-        {
-            text = _("Sync Now"),
             keep_menu_open = false,
             callback = function()
-                -- Explicit user action: OK to connect to Wi-Fi if offline
                 NetworkMgr:runWhenOnline(function()
                     UIManager:show(Notification:new{ text = _("Syncing with Sink server...") })
                     self:_syncDocument(true)
                 end)
             end,
         },
+
+        -- 2. Daily Reading Toggle: Auto-Sync
         {
-            text = _("Auto-Sync on Read/Close/Sleep"),
+            text = _("Auto-Sync on Read / Close / Sleep"),
             checked_func = function()
                 return self.settings.auto_sync
             end,
@@ -595,13 +589,72 @@ function Sink:getMenuTable()
                 self.settings.auto_sync = not self.settings.auto_sync
                 self:saveSettings()
             end,
+            separator = true,
         },
+
+        -- 3. Live Account & Connection Status
         {
-            text = _("Server URL"),
-            keep_menu_open = true,
-            subtext_func = function()
-                return self.settings.server_url
+            text_func = function()
+                if self.settings.username and self.settings.username ~= "" then
+                    return string.format(_("Account: Paired (%s)"), self.settings.username)
+                else
+                    return _("Account: Not Paired (Tap to pair)")
+                end
             end,
+            keep_menu_open = true,
+            callback = function(touch_menu_instance)
+                if self.settings.username ~= "" then
+                    NetworkMgr:runWhenOnline(function()
+                        self:testConnection()
+                    end)
+                else
+                    if SinkPairing then
+                        SinkPairing:startPairing(self, function()
+                            self:_syncDocument(false)
+                            if touch_menu_instance and touch_menu_instance.updateItems then
+                                pcall(function() touch_menu_instance:updateItems() end)
+                            end
+                        end)
+                    end
+                end
+            end,
+        },
+
+        -- 4. Device Setup / Pairing Action
+        {
+            text_func = function()
+                if self.settings.username and self.settings.username ~= "" then
+                    return _("Re-Pair Device (Phone / PC)")
+                else
+                    return _("Pair Device (Phone / PC)")
+                end
+            end,
+            keep_menu_open = false,
+            callback = function(touch_menu_instance)
+                if SinkPairing then
+                    SinkPairing:startPairing(self, function()
+                        self:_syncDocument(false)
+                        if touch_menu_instance and touch_menu_instance.updateItems then
+                            pcall(function() touch_menu_instance:updateItems() end)
+                        end
+                    end)
+                else
+                    UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })
+                end
+            end,
+        },
+
+        -- 5. Server URL Configuration
+        {
+            text_func = function()
+                local url = self.settings.server_url or ""
+                local display = url:gsub("^https?://", "")
+                if #display > 28 then
+                    display = display:sub(1, 25) .. "..."
+                end
+                return string.format(_("Server: %s"), display)
+            end,
+            keep_menu_open = true,
             callback = function(touch_menu_instance)
                 self:showInputDialog(_("Server URL"), self.settings.server_url, function(val)
                     self.settings.server_url = cleanUrl(val)
@@ -612,21 +665,22 @@ function Sink:getMenuTable()
                 end)
             end,
         },
+
+        -- 6. Unlink / Reset Option
         {
-            text = _("Device Account Status"),
-            subtext_func = function()
-                return (self.settings.username ~= "" and ("Paired (" .. self.settings.username .. ")")) or _("Not paired")
+            text = _("Unlink Device / Clear Account"),
+            enabled_func = function()
+                return self.settings.username ~= ""
             end,
-            callback = function()
-                if self.settings.username ~= "" then
-                    NetworkMgr:runWhenOnline(function()
-                        self:testConnection()
-                    end)
-                else
-                    if SinkPairing then
-                        SinkPairing:startPairing(self)
-                    end
+            keep_menu_open = true,
+            callback = function(touch_menu_instance)
+                self.settings.username = ""
+                self.settings.userkey = ""
+                self:saveSettings()
+                if touch_menu_instance and touch_menu_instance.updateItems then
+                    pcall(function() touch_menu_instance:updateItems() end)
                 end
+                UIManager:show(Notification:new{ text = _("Device unlinked.") })
             end,
         },
     }
