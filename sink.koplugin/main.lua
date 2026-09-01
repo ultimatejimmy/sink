@@ -172,30 +172,16 @@ end
 -- Document & Progress Utilities
 --------------------------------------------------------------------------------
 
-function Sink:_getDocumentMD5()
+function Sink:_urlEncode(str)
+    if not str then return "" end
+    return str:gsub("\n", "\r\n"):gsub("([^%w%-_.~])", function(c)
+        return string.format("%%%02X", string.byte(c))
+    end)
+end
+
+function Sink:_getBinaryMD5()
     if not self.ui or not self.ui.document then return nil end
 
-    -- 1. Filename matching (recommended for multi-device sync, e.g. Phone <-> WSL / Calibre)
-    if self.settings.checksum_method == "filename" then
-        local file = self.ui.document.file
-        if file then
-            local file_name = nil
-            if util and util.splitFilePathName then
-                local _, fn = util.splitFilePathName(file)
-                file_name = fn
-            else
-                file_name = file:match("[^/]+$") or file:match("[^\\]+$")
-            end
-            if file_name and file_name ~= "" then
-                local ok, sha2 = pcall(require, "ffi/sha2")
-                if ok and sha2 and sha2.md5 then
-                    return sha2.md5(file_name)
-                end
-            end
-        end
-    end
-
-    -- 2. Binary checksum (standard KOReader partial_md5_checksum)
     if self.ui.doc_settings then
         local checksum = self.ui.doc_settings:readSetting("partial_md5_checksum")
         if checksum and checksum ~= "" then
@@ -217,18 +203,72 @@ function Sink:_getDocumentMD5()
         end
     end
 
-    -- 3. Fallback to filename hash if binary calculation failed (never hash absolute path)
-    if self.ui.document.file then
-        local file_name = self.ui.document.file:match("[^/]+$") or self.ui.document.file:match("[^\\]+$")
-        if file_name and file_name ~= "" then
-            local ok, sha2 = pcall(require, "ffi/sha2")
-            if ok and sha2 and sha2.md5 then
-                return sha2.md5(file_name)
-            end
+    return nil
+end
+
+function Sink:_getFilenameMD5()
+    if not self.ui or not self.ui.document or not self.ui.document.file then return nil, nil end
+
+    local file_name = nil
+    if util and util.splitFilePathName then
+        local _, fn = util.splitFilePathName(self.ui.document.file)
+        file_name = fn
+    else
+        file_name = self.ui.document.file:match("[^/]+$") or self.ui.document.file:match("[^\\]+$")
+    end
+
+    if file_name and file_name ~= "" then
+        local ok, sha2 = pcall(require, "ffi/sha2")
+        if ok and sha2 and sha2.md5 then
+            return sha2.md5(file_name), file_name
         end
     end
 
-    return nil
+    return nil, file_name
+end
+
+function Sink:_getBookMetadata()
+    if not self.ui then return nil, nil, nil end
+
+    local props = self.ui.doc_props or (self.ui.document and self.ui.document.getProps and self.ui.document:getProps()) or {}
+    local title = props.title or props.display_title
+    local authors = props.authors
+
+    local _, file_name = self:_getFilenameMD5()
+    if (not title or title == "") and file_name then
+        title = file_name:match("([^/\\]+)%.%w+$") or file_name
+    end
+
+    if not title or title == "" then
+        return nil, nil, nil
+    end
+
+    -- Normalize title: remove parenthesized series/subtitles, lowercase, strip punctuation
+    local clean_title = title:lower()
+    clean_title = clean_title:gsub("%b()", ""):gsub("%b[]", "")
+    clean_title = clean_title:gsub("^the%s+", ""):gsub("^a%s+", ""):gsub("^an%s+", "")
+    clean_title = clean_title:gsub(",%s*the$", ""):gsub(",%s*a$", ""):gsub(",%s*an$", "")
+    clean_title = clean_title:gsub("[^%w%s]", " ")
+    clean_title = clean_title:match("^%s*(.-)%s*$"):gsub("%s+", " ")
+
+    local clean_authors = ""
+    if authors and authors ~= "" then
+        clean_authors = authors:lower():gsub("[^%w%s]", " ")
+        clean_authors = clean_authors:match("^%s*(.-)%s*$"):gsub("%s+", " ")
+    end
+
+    local book_key = clean_authors ~= "" and (clean_title .. "::" .. clean_authors) or clean_title
+    return title, authors, book_key
+end
+
+function Sink:_getDocumentMD5()
+    if not self.ui or not self.ui.document then return nil end
+
+    if self.settings.checksum_method == "filename" then
+        return (self:_getFilenameMD5()) or self:_getBinaryMD5()
+    else
+        return self:_getBinaryMD5() or (self:_getFilenameMD5())
+    end
 end
 
 function Sink:_getLocalProgress()
@@ -387,7 +427,32 @@ function Sink:_pullDocument(is_manual)
         return false
     end
 
-    local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
+    local title, authors, book_key = self:_getBookMetadata()
+    local bin_hash = self:_getBinaryMD5()
+    local fn_hash = self:_getFilenameMD5()
+
+    local endpoint = "/syncs/progress/" .. doc_md5
+    local params = {}
+    if book_key and book_key ~= "" then
+        table.insert(params, "book_key=" .. self:_urlEncode(book_key))
+    end
+    if title and title ~= "" then
+        table.insert(params, "title=" .. self:_urlEncode(title))
+    end
+    if authors and authors ~= "" then
+        table.insert(params, "authors=" .. self:_urlEncode(authors))
+    end
+    local alt_list = {}
+    if bin_hash and bin_hash ~= doc_md5 then table.insert(alt_list, bin_hash) end
+    if fn_hash and fn_hash ~= doc_md5 then table.insert(alt_list, fn_hash) end
+    if #alt_list > 0 then
+        table.insert(params, "alt_hashes=" .. table.concat(alt_list, ","))
+    end
+    if #params > 0 then
+        endpoint = endpoint .. "?" .. table.concat(params, "&")
+    end
+
+    local res, err = self:_makeRequest("GET", endpoint)
     if err or not res or (res.status ~= 200 and res.status ~= 201) then
         logger.warn("Sink: error fetching remote progress: " .. tostring(err or res and res.status))
         if is_manual then
@@ -425,17 +490,16 @@ function Sink:_pullDocument(is_manual)
     end
 
     -- Determine if remote should be applied:
-    -- Prefer timestamp if available; otherwise use percentage with 0.5% margin for cross-device layout differences
-    local last_local_ts = self.last_page_turn_time or 0
-    if self.settings.last_sync_doc == doc_md5 and (self.settings.last_sync_time or 0) > last_local_ts then
-        last_local_ts = self.settings.last_sync_time
-    end
-
+    -- 1. If remote is further ahead by >0.1% (e.g. read on phone/kindle), pull!
+    -- 2. If user just opened document (last_page_turn_time == 0) and remote has progress, pull!
+    -- 3. If remote timestamp is newer than when the user actually turned a page locally, pull!
     local should_pull = false
-    if remote_ts > 0 and last_local_ts > 0 then
-        should_pull = (remote_ts > last_local_ts)
-    else
-        should_pull = (remote_pct > local_pct + 0.005)
+    if remote_pct > (local_pct + 0.001) then
+        should_pull = true
+    elseif (self.last_page_turn_time or 0) == 0 and remote_ts > 0 then
+        should_pull = true
+    elseif remote_ts > 0 and (self.last_page_turn_time or 0) > 0 then
+        should_pull = (remote_ts > self.last_page_turn_time)
     end
 
     if should_pull then
@@ -488,16 +552,29 @@ function Sink:_pushDocument(is_manual)
         return false
     end
 
+    local title, authors, book_key = self:_getBookMetadata()
+    local bin_hash = self:_getBinaryMD5()
+    local fn_hash = self:_getFilenameMD5()
+    local alt_list = {}
+    if bin_hash and bin_hash ~= doc_md5 then table.insert(alt_list, bin_hash) end
+    if fn_hash and fn_hash ~= doc_md5 then table.insert(alt_list, fn_hash) end
+
     local dev_model, dev_id = self:_getDeviceInfo()
     logger.info(string.format("Sink: pushing local progress: %.1f%% to cloud", (local_pct or 0) * 100))
 
-    local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", {
+    local push_payload = {
         document = doc_md5,
         percentage = local_pct,
         progress = local_prog,
         device = dev_model,
         device_id = dev_id,
-    })
+        title = title,
+        authors = authors,
+        book_key = book_key,
+        alt_hashes = #alt_list > 0 and alt_list or nil,
+    }
+
+    local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", push_payload)
 
     if push_err or not push_res or push_res.status ~= 200 then
         logger.warn("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
@@ -549,7 +626,22 @@ function Sink:_syncDocument(is_manual_or_mode, is_manual_arg)
         local local_pct, local_prog = self:_getLocalProgress()
         if not local_pct or not local_prog then return false end
 
-        local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
+        local title, authors, book_key = self:_getBookMetadata()
+        local bin_hash = self:_getBinaryMD5()
+        local fn_hash = self:_getFilenameMD5()
+
+        local endpoint = "/syncs/progress/" .. doc_md5
+        local params = {}
+        if book_key and book_key ~= "" then table.insert(params, "book_key=" .. self:_urlEncode(book_key)) end
+        if title and title ~= "" then table.insert(params, "title=" .. self:_urlEncode(title)) end
+        if authors and authors ~= "" then table.insert(params, "authors=" .. self:_urlEncode(authors)) end
+        local alt_list = {}
+        if bin_hash and bin_hash ~= doc_md5 then table.insert(alt_list, bin_hash) end
+        if fn_hash and fn_hash ~= doc_md5 then table.insert(alt_list, fn_hash) end
+        if #alt_list > 0 then table.insert(params, "alt_hashes=" .. table.concat(alt_list, ",")) end
+        if #params > 0 then endpoint = endpoint .. "?" .. table.concat(params, "&") end
+
+        local res, err = self:_makeRequest("GET", endpoint)
         if err or not res or (res.status ~= 200 and res.status ~= 201) then
             return self:_pushDocument(is_manual)
         end
@@ -570,19 +662,12 @@ function Sink:_syncDocument(is_manual_or_mode, is_manual_arg)
             return true
         end
 
-        local last_local_ts = self.last_page_turn_time or 0
-        if self.settings.last_sync_doc == doc_md5 and (self.settings.last_sync_time or 0) > last_local_ts then
-            last_local_ts = self.settings.last_sync_time
-        end
-
-        local should_pull = false
-        if remote_ts > 0 and last_local_ts > 0 then
-            should_pull = (remote_ts > last_local_ts)
-        else
-            should_pull = (remote_pct > local_pct + 0.005)
-        end
-
-        if should_pull then
+        -- If remote is further ahead by >0.1%:
+        if remote_pct > (local_pct + 0.001) then
+            return self:_pullDocument(is_manual)
+        elseif (self.last_page_turn_time or 0) == 0 and remote_ts > 0 then
+            return self:_pullDocument(is_manual)
+        elseif remote_ts > 0 and (self.last_page_turn_time or 0) > 0 and remote_ts > self.last_page_turn_time then
             return self:_pullDocument(is_manual)
         else
             return self:_pushDocument(is_manual)

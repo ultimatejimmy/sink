@@ -15,8 +15,12 @@ CREATE TABLE IF NOT EXISTS progress (
     device TEXT NOT NULL,
     device_id TEXT,
     timestamp INTEGER NOT NULL,
+    title TEXT,
+    authors TEXT,
+    book_key TEXT,
     PRIMARY KEY (username, document_hash),
     FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username);
+CREATE INDEX IF NOT EXISTS idx_progress_user_book ON progress(username, book_key);

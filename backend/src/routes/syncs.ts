@@ -26,7 +26,17 @@ syncsRouter.get("/progress/:document_hash", async (c) => {
     );
   }
 
-  const record = await getProgress(c.env.DB, username, documentHash);
+  const queryTitle = c.req.query("title");
+  const queryAuthors = c.req.query("authors");
+  let bookKey = c.req.query("book_key") || null;
+  if (!bookKey && queryTitle) {
+    bookKey = normalizeBookKey(queryTitle, queryAuthors);
+  }
+
+  const altHashesParam = c.req.query("alt_hashes");
+  const altHashes = altHashesParam ? altHashesParam.split(",").map((s) => s.trim()).filter(Boolean) : null;
+
+  const record = await getProgress(c.env.DB, username, documentHash, bookKey, altHashes);
 
   if (!record) {
     // Kosync spec: return empty JSON object when no progress exists for document
@@ -96,6 +106,11 @@ syncsRouter.put("/progress", async (c) => {
 
   const timestamp = Math.floor(Date.now() / 1000);
 
+  const title = body.title || body.metadata?.title || null;
+  const authors = body.authors || body.metadata?.authors || null;
+  const bookKey = body.book_key || (title ? normalizeBookKey(title, authors) : null);
+  const altHashes = body.alt_hashes || null;
+
   const success = await upsertProgress(c.env.DB, {
     username,
     document_hash: doc,
@@ -104,6 +119,10 @@ syncsRouter.put("/progress", async (c) => {
     device,
     device_id: deviceId,
     timestamp,
+    title,
+    authors,
+    book_key: bookKey,
+    alt_hashes: altHashes,
   });
 
   if (!success) {

@@ -433,5 +433,66 @@ describe("KOReader Kosync API Endpoints", () => {
       expect(getData2.progress).toBe("/body/DocFragment[35]/body/p[10]/text.1");
       expect(getData2.device).toBe("KOReader Android");
     });
+
+    it("bridges progress between phone and WSL when document hashes differ using book_key", async () => {
+      const username = "cross_device_user";
+      const userKey = "sync_key_cross_device";
+
+      // Register / Auth user
+      await app.request(
+        "/users/create",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password: userKey }),
+        },
+        env
+      );
+
+      const phoneHash = "hash_phone_binary_1111";
+      const wslHash = "hash_wsl_binary_2222";
+
+      // 1. Phone syncs reading progress under its own binary hash with book title
+      const phonePutRes = await app.request(
+        "/syncs/progress",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-auth-user": username,
+            "x-auth-key": userKey,
+          },
+          body: JSON.stringify({
+            document: phoneHash,
+            percentage: 0.225,
+            progress: "/body/DocFragment[8]/body/div/section/p[4]/text().34",
+            device: "akita",
+            title: "Career of Evil",
+            authors: "Robert Galbraith",
+          }),
+        },
+        env
+      );
+      expect(phonePutRes.status).toBe(200);
+
+      // 2. WSL opens the book under its own completely different hash, but provides title/authors
+      const wslGetRes = await app.request(
+        `/syncs/progress/${wslHash}?title=${encodeURIComponent("Career of Evil (Cormoran Strike)")}&authors=${encodeURIComponent("Robert Galbraith")}`,
+        {
+          method: "GET",
+          headers: {
+            "x-auth-user": username,
+            "x-auth-key": userKey,
+          },
+        },
+        env
+      );
+
+      expect(wslGetRes.status).toBe(200);
+      const wslData = await wslGetRes.json<any>();
+      expect(wslData.percentage).toBeCloseTo(0.225);
+      expect(wslData.progress).toBe("/body/DocFragment[8]/body/div/section/p[4]/text().34");
+      expect(wslData.device).toBe("akita");
+    });
   });
 });

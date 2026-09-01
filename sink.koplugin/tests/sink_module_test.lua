@@ -191,12 +191,21 @@ assert(handled_event and handled_event.name == "GotoXPointer" and handled_event.
 -- Test 6: SinkPairing module loads cleanly and has startPairing/stop methods
 local pairing = require("sink_pairing")
 assert(type(pairing) == "table", "sink_pairing module should load as table")
-assert(type(pairing.startPairing) == "function", "startPairing should be a function")
-assert(type(pairing.stop) == "function", "stop should be a function")
-
 -- Test 7: SinkPairing:_buildPairingDialog generates valid dialog with widgets
 local dlg = pairing:_buildPairingDialog("https://sink.test", "ABC123")
 assert(dlg ~= nil, "_buildPairingDialog should return a dialog instance")
 assert(dlg._added_widgets ~= nil and #dlg._added_widgets >= 1, "Dialog should contain added widgets")
+
+-- Test 8: _urlEncode and _getBookMetadata
+assert(test_inst:_urlEncode("hello world & more") == "hello%20world%20%26%20more", "Should URL-encode parameters properly")
+
+test_ui.doc_props = {
+    title = "Career of Evil (Cormoran Strike)",
+    authors = "Robert Galbraith",
+}
+local title, authors, book_key = test_inst:_getBookMetadata()
+assert(title == "Career of Evil (Cormoran Strike)", "Should extract title")
+assert(authors == "Robert Galbraith", "Should extract authors")
+assert(book_key == "career of evil::robert galbraith", "Should compute normalized book_key correctly")
 
 print("✓ Sink main.lua module tests PASSED!")

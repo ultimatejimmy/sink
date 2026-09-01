@@ -18,6 +18,9 @@ export interface ProgressRecord {
   device: string;
   device_id: string | null;
   timestamp: number;
+  title?: string | null;
+  authors?: string | null;
+  book_key?: string | null;
 }
 
 export interface CreateUserPayload {
@@ -37,6 +40,42 @@ export interface UpdateProgressPayload {
   progress?: string;
   device?: string;
   device_id?: string;
+  metadata?: {
+    filename?: string;
+    title?: string;
+    authors?: string;
+  };
+  title?: string;
+  authors?: string;
+  book_key?: string;
+  alt_hashes?: string[];
+}
+
+export function normalizeBookKey(title?: string | null, authors?: string | null): string {
+  if (!title || !title.trim()) return "";
+  let cleanTitle = title
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/\[.*?\]/g, "")
+    .replace(/^(the|a|an)\s+/i, "")
+    .replace(/,\s*(the|a|an)$/i, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  let cleanAuthor = "";
+  if (authors && authors.trim()) {
+    cleanAuthor = authors
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .sort()
+      .join(" ");
+  }
+
+  return cleanAuthor ? `${cleanTitle}::${cleanAuthor}` : cleanTitle;
 }
 
 export interface ProgressResponse {
