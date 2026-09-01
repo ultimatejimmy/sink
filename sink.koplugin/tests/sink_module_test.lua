@@ -120,7 +120,7 @@ assert(run_when_online_called == false, "Background hooks must NEVER invoke runW
 local menu = instance:getMenuTable()
 assert(type(menu) == "table" and #menu >= 4, "Menu table must have at least 4 items")
 
--- Test 1: _getDocumentMD5 with partial_md5_checksum
+-- Test 1: _getDocumentMD5 with binary checksum
 local mock_doc_settings = {
     settings = { partial_md5_checksum = "abc123md5hash" },
     readSetting = function(self, k) return self.settings[k] end
@@ -132,13 +132,13 @@ local test_ui = {
         info = { has_pages = false }
     }
 }
-local test_inst = setmetatable({ ui = test_ui, settings = { username = "testuser", userkey = "testkey" } }, { __index = Sink })
-assert(test_inst:_getDocumentMD5() == "abc123md5hash", "Should extract partial_md5_checksum from doc_settings")
+local test_inst = setmetatable({ ui = test_ui, settings = { username = "testuser", userkey = "testkey", checksum_method = "binary" } }, { __index = Sink })
+assert(test_inst:_getDocumentMD5() == "abc123md5hash", "Should extract partial_md5_checksum from doc_settings in binary mode")
 
--- Test 2: _getDocumentMD5 fallback to fastDigest
-test_ui.doc_settings.settings.partial_md5_checksum = nil
-test_ui.document.fastDigest = function(self) return "fastdigest_hash_456" end
-assert(test_inst:_getDocumentMD5() == "fastdigest_hash_456", "Should fall back to document:fastDigest()")
+-- Test 2: _getDocumentMD5 with filename matching
+test_inst.settings.checksum_method = "filename"
+local fn_hash = test_inst:_getDocumentMD5()
+assert(fn_hash ~= nil and #fn_hash > 0, "Should generate hash for filename in filename mode")
 
 -- Test 3: _getLocalProgress for reflowable documents
 test_ui.rolling = {

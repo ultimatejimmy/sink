@@ -18,6 +18,7 @@ export async function ensureDatabase(db: D1Database): Promise<void> {
         CREATE TABLE IF NOT EXISTS users (
           username TEXT PRIMARY KEY,
           password_hash TEXT NOT NULL,
+          sync_key TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `),
@@ -48,6 +49,14 @@ export async function ensureDatabase(db: D1Database): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username)
       `),
     ]);
+
+    // Ensure sync_key column exists in existing deployments
+    try {
+      await db.prepare("ALTER TABLE users ADD COLUMN sync_key TEXT").run();
+    } catch {
+      // Column already exists or table freshly created
+    }
+
     isInitialized = true;
   } catch (err) {
     console.error("Database batch bootstrap error:", err);
@@ -61,7 +70,7 @@ export async function getUserByUsername(
 ): Promise<User | null> {
   await ensureDatabase(db);
   const result = await db
-    .prepare("SELECT username, password_hash, created_at FROM users WHERE username = ?")
+    .prepare("SELECT username, password_hash, sync_key, created_at FROM users WHERE username = ?")
     .bind(username)
     .first<User>();
 
@@ -71,12 +80,13 @@ export async function getUserByUsername(
 export async function createUser(
   db: D1Database,
   username: string,
-  passwordHash: string
+  passwordHash: string,
+  syncKey?: string
 ): Promise<boolean> {
   await ensureDatabase(db);
   const result = await db
-    .prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)")
-    .bind(username, passwordHash)
+    .prepare("INSERT INTO users (username, password_hash, sync_key) VALUES (?, ?, ?)")
+    .bind(username, passwordHash, syncKey ?? null)
     .run();
 
   return result.success;
@@ -85,15 +95,18 @@ export async function createUser(
 export async function upsertUser(
   db: D1Database,
   username: string,
-  passwordHash: string
+  passwordHash: string,
+  syncKey?: string
 ): Promise<boolean> {
   await ensureDatabase(db);
   const result = await db
     .prepare(`
-      INSERT INTO users (username, password_hash) VALUES (?, ?)
-      ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash
+      INSERT INTO users (username, password_hash, sync_key) VALUES (?, ?, ?)
+      ON CONFLICT(username) DO UPDATE SET
+        password_hash = excluded.password_hash,
+        sync_key = COALESCE(excluded.sync_key, users.sync_key)
     `)
-    .bind(username, passwordHash)
+    .bind(username, passwordHash, syncKey ?? null)
     .run();
 
   return result.success;

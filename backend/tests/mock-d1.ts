@@ -65,14 +65,17 @@ export function createMockD1(): D1Database {
         async run<T = Record<string, unknown>>(): Promise<D1Result<T>> {
           const q = query.trim();
 
-          // User insert: INSERT INTO users (username, password_hash) VALUES (?, ?)
+          // User insert / upsert: INSERT INTO users ...
           if (q.includes("INSERT INTO users")) {
             const username = boundParams[0];
             const passwordHash = boundParams[1];
+            const syncKey = boundParams[2];
+            const existing = usersTable.get(username);
             usersTable.set(username, {
               username,
               password_hash: passwordHash,
-              created_at: new Date().toISOString(),
+              sync_key: syncKey !== undefined && syncKey !== null ? syncKey : existing?.sync_key,
+              created_at: existing?.created_at || new Date().toISOString(),
             });
             return {
               results: [] as T[],

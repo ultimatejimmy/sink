@@ -107,6 +107,35 @@ describe("KOReader Kosync API Endpoints", () => {
       const authData = await authRes2.json<any>();
       expect(authData.authorized).toBe("OK");
     });
+
+    it("shares account sync_key across multiple devices so both can authenticate", async () => {
+      // 1. Device 1 (WSL) pairs via web portal
+      const createRes1 = await app.request("/api/session/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, env);
+      const { session_id: s1 } = await createRes1.json<any>();
+      await app.request(`/api/session/${s1}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "primary_reader" }) }, env);
+
+      const pollRes1 = await app.request(`/api/session/${s1}/poll`, { method: "GET" }, env);
+      const { userkey: d1_key } = await pollRes1.json<any>();
+      expect(d1_key).toBeTruthy();
+
+      // 2. Device 2 (Phone) pairs later
+      const createRes2 = await app.request("/api/session/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, env);
+      const { session_id: s2 } = await createRes2.json<any>();
+      await app.request(`/api/session/${s2}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "primary_reader" }) }, env);
+
+      const pollRes2 = await app.request(`/api/session/${s2}/poll`, { method: "GET" }, env);
+      const { userkey: d2_key } = await pollRes2.json<any>();
+
+      // Both devices must share the same key
+      expect(d2_key).toBe(d1_key);
+
+      // Both devices must be able to authenticate simultaneously
+      const auth1 = await app.request("/users/auth", { method: "GET", headers: { "x-auth-user": "primary_reader", "x-auth-key": d1_key } }, env);
+      expect(auth1.status).toBe(200);
+
+      const auth2 = await app.request("/users/auth", { method: "GET", headers: { "x-auth-user": "primary_reader", "x-auth-key": d2_key } }, env);
+      expect(auth2.status).toBe(200);
+    });
   });
 
   describe("User Registration (/users/create)", () => {

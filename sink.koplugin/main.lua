@@ -43,6 +43,7 @@ local DEFAULT_SETTINGS = {
     username = "",
     userkey = "",
     auto_sync = true,
+    checksum_method = "filename",
     last_sync_time = 0,
     last_sync_doc = "",
 }
@@ -50,6 +51,7 @@ local DEFAULT_SETTINGS = {
 function Sink:init()
     self.ui.menu:registerToMainMenu(self)
     self:loadSettings()
+    self.last_page_turn_time = 0
 end
 
 function Sink:getSettingsPath()
@@ -171,42 +173,57 @@ end
 --------------------------------------------------------------------------------
 
 function Sink:_getDocumentMD5()
-    if not self.ui then return nil end
+    if not self.ui or not self.ui.document then return nil end
 
-    -- 1. Read partial_md5_checksum from document settings (standard KOReader key)
+    -- 1. Filename matching (recommended for multi-device sync, e.g. Phone <-> WSL / Calibre)
+    if self.settings.checksum_method == "filename" then
+        local file = self.ui.document.file
+        if file then
+            local file_name = nil
+            if util and util.splitFilePathName then
+                local _, fn = util.splitFilePathName(file)
+                file_name = fn
+            else
+                file_name = file:match("[^/]+$") or file:match("[^\\]+$")
+            end
+            if file_name and file_name ~= "" then
+                local ok, sha2 = pcall(require, "ffi/sha2")
+                if ok and sha2 and sha2.md5 then
+                    return sha2.md5(file_name)
+                end
+            end
+        end
+    end
+
+    -- 2. Binary checksum (standard KOReader partial_md5_checksum)
     if self.ui.doc_settings then
         local checksum = self.ui.doc_settings:readSetting("partial_md5_checksum")
         if checksum and checksum ~= "" then
             return checksum
         end
-        -- Fallback check for any legacy key
         local legacy = self.ui.doc_settings:readSetting("doc_md5") or self.ui.doc_settings:readSetting("md5")
         if legacy and legacy ~= "" then
             return legacy
         end
     end
 
-    -- 2. Fallback using document object or file path
-    if self.ui.document then
-        if self.ui.document.fastDigest then
-            local ok, digest = pcall(function() return self.ui.document:fastDigest() end)
-            if ok and digest and digest ~= "" then
-                return digest
+    if self.ui.document.file and util and util.partialMD5 then
+        local ok, md5_val = pcall(function() return util.partialMD5(self.ui.document.file) end)
+        if ok and md5_val and md5_val ~= "" then
+            if self.ui.doc_settings then
+                pcall(function() self.ui.doc_settings:saveSetting("partial_md5_checksum", md5_val) end)
             end
+            return md5_val
         end
-        if self.ui.document.file then
-            if util and util.partialMD5 then
-                local ok, md5_val = pcall(function() return util.partialMD5(self.ui.document.file) end)
-                if ok and md5_val and md5_val ~= "" then
-                    return md5_val
-                end
-            end
+    end
+
+    -- 3. Fallback to filename hash if binary calculation failed (never hash absolute path)
+    if self.ui.document.file then
+        local file_name = self.ui.document.file:match("[^/]+$") or self.ui.document.file:match("[^\\]+$")
+        if file_name and file_name ~= "" then
             local ok, sha2 = pcall(require, "ffi/sha2")
             if ok and sha2 and sha2.md5 then
-                local md5_val = sha2.md5(self.ui.document.file)
-                if md5_val and md5_val ~= "" then
-                    return md5_val
-                end
+                return sha2.md5(file_name)
             end
         end
     end
@@ -344,9 +361,7 @@ end
 -- Core Sync Actions
 --------------------------------------------------------------------------------
 
--- Perform sync for the current document
--- is_manual: boolean flag. If true, show user-facing notifications/alerts.
-function Sink:_syncDocument(is_manual)
+function Sink:_pullDocument(is_manual)
     if not self.settings.username or self.settings.username == "" then
         if is_manual then
             UIManager:show(InfoMessage:new{
@@ -372,15 +387,12 @@ function Sink:_syncDocument(is_manual)
         return false
     end
 
-    logger.info(string.format("Sink: syncing document %s (local progress: %.1f%%, %s)", tostring(doc_md5), (local_pct or 0) * 100, tostring(local_prog)))
-
-    -- 1. Fetch remote progress
     local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
     if err or not res or (res.status ~= 200 and res.status ~= 201) then
         logger.warn("Sink: error fetching remote progress: " .. tostring(err or res and res.status))
         if is_manual then
             UIManager:show(InfoMessage:new{
-                text = _("Failed to sync progress:\n") .. tostring(err or (res and res.raw) or "Unknown error"),
+                text = _("Failed to fetch remote progress:\n") .. tostring(err or (res and res.raw) or "Unknown error"),
             })
         end
         return false
@@ -391,10 +403,42 @@ function Sink:_syncDocument(is_manual)
     local remote_prog = remote.progress
     local remote_ts = tonumber(remote.timestamp) or 0
 
-    local dev_model, dev_id = self:_getDeviceInfo()
+    if not remote_prog or not remote_pct then
+        logger.info("Sink: no remote progress recorded yet for document " .. tostring(doc_md5))
+        if is_manual then
+            UIManager:show(Notification:new{
+                text = _("No remote progress found for this book."),
+            })
+        end
+        return true
+    end
 
-    -- 2. Compare: If remote progress exists and is further than local progress, apply remote
-    if remote_pct and remote_prog and remote_pct > (local_pct + 0.0001) then
+    -- If already identical progress, no update needed
+    if remote_prog == local_prog then
+        logger.info("Sink: document already at current progress (" .. tostring(remote_prog) .. ")")
+        if is_manual then
+            UIManager:show(Notification:new{
+                text = _("Already synchronized with cloud."),
+            })
+        end
+        return true
+    end
+
+    -- Determine if remote should be applied:
+    -- Prefer timestamp if available; otherwise use percentage with 0.5% margin for cross-device layout differences
+    local last_local_ts = self.last_page_turn_time or 0
+    if self.settings.last_sync_doc == doc_md5 and (self.settings.last_sync_time or 0) > last_local_ts then
+        last_local_ts = self.settings.last_sync_time
+    end
+
+    local should_pull = false
+    if remote_ts > 0 and last_local_ts > 0 then
+        should_pull = (remote_ts > last_local_ts)
+    else
+        should_pull = (remote_pct > local_pct + 0.005)
+    end
+
+    if should_pull then
         logger.info(string.format("Sink: pulling remote progress: %.1f%% (%s)", remote_pct * 100, remote.device or "Remote"))
         self:_applyRemoteProgress(remote_prog, remote_pct)
         self.settings.last_sync_time = remote_ts > 0 and remote_ts or os.time()
@@ -408,37 +452,141 @@ function Sink:_syncDocument(is_manual)
         end
         return true
     else
-        -- 3. Local progress is equal or further: push local progress to cloud
-        logger.info(string.format("Sink: pushing local progress: %.1f%% to cloud", (local_pct or 0) * 100))
-        local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", {
-            document = doc_md5,
-            percentage = local_pct,
-            progress = local_prog,
-            device = dev_model,
-            device_id = dev_id,
-        })
+        logger.info(string.format("Sink: local progress is current (local: %.1f%%, remote: %.1f%%). Skipping pull.", (local_pct or 0) * 100, remote_pct * 100))
+        if is_manual then
+            UIManager:show(Notification:new{
+                text = string.format(_("Local position is current (%.1f%%)."), (local_pct or 0) * 100),
+            })
+        end
+        return true
+    end
+end
 
-        if push_err or not push_res or push_res.status ~= 200 then
-            logger.warn("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
+function Sink:_pushDocument(is_manual)
+    if not self.settings.username or self.settings.username == "" then
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("Please pair your device or configure credentials in settings."),
+            })
+        end
+        return false
+    end
+
+    local doc_md5 = self:_getDocumentMD5()
+    if not doc_md5 then
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("No active document found to sync."),
+            })
+        end
+        return false
+    end
+
+    local local_pct, local_prog = self:_getLocalProgress()
+    if not local_pct or not local_prog then
+        logger.warn("Sink: unable to extract local progress for document " .. tostring(doc_md5))
+        return false
+    end
+
+    local dev_model, dev_id = self:_getDeviceInfo()
+    logger.info(string.format("Sink: pushing local progress: %.1f%% to cloud", (local_pct or 0) * 100))
+
+    local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", {
+        document = doc_md5,
+        percentage = local_pct,
+        progress = local_prog,
+        device = dev_model,
+        device_id = dev_id,
+    })
+
+    if push_err or not push_res or push_res.status ~= 200 then
+        logger.warn("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
+        if is_manual then
+            UIManager:show(InfoMessage:new{
+                text = _("Failed to upload progress:\n") .. tostring(push_err or (push_res and push_res.raw) or "Unknown error"),
+            })
+        end
+        return false
+    end
+
+    local ts = (push_res.body and push_res.body.timestamp) or os.time()
+    self.settings.last_sync_time = ts
+    self.settings.last_sync_doc = doc_md5
+    self:saveSettings()
+
+    if is_manual then
+        UIManager:show(Notification:new{
+            text = string.format(_("Synced to cloud: %.1f%%"), (local_pct or 0) * 100),
+        })
+    end
+    return true
+end
+
+function Sink:_syncDocument(is_manual_or_mode, is_manual_arg)
+    local mode = "full"
+    local is_manual = false
+    if type(is_manual_or_mode) == "string" then
+        mode = is_manual_or_mode
+        is_manual = is_manual_arg or false
+    elseif type(is_manual_or_mode) == "boolean" then
+        is_manual = is_manual_or_mode
+    end
+
+    if mode == "pull" then
+        return self:_pullDocument(is_manual)
+    elseif mode == "push" then
+        return self:_pushDocument(is_manual)
+    else
+        -- Full bidirectional sync (manual button / network reconnect)
+        local doc_md5 = self:_getDocumentMD5()
+        if not doc_md5 then
             if is_manual then
-                UIManager:show(InfoMessage:new{
-                    text = _("Failed to upload progress:\n") .. tostring(push_err or (push_res and push_res.raw) or "Unknown error"),
-                })
+                UIManager:show(InfoMessage:new{ text = _("No active document found to sync.") })
             end
             return false
         end
 
-        local ts = (push_res.body and push_res.body.timestamp) or os.time()
-        self.settings.last_sync_time = ts
-        self.settings.last_sync_doc = doc_md5
-        self:saveSettings()
+        local local_pct, local_prog = self:_getLocalProgress()
+        if not local_pct or not local_prog then return false end
 
-        if is_manual then
-            UIManager:show(Notification:new{
-                text = string.format(_("Synced to cloud: %.1f%%"), local_pct * 100),
-            })
+        local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
+        if err or not res or (res.status ~= 200 and res.status ~= 201) then
+            return self:_pushDocument(is_manual)
         end
-        return true
+
+        local remote = res.body or {}
+        local remote_pct = tonumber(remote.percentage)
+        local remote_prog = remote.progress
+        local remote_ts = tonumber(remote.timestamp) or 0
+
+        if not remote_prog or not remote_pct then
+            return self:_pushDocument(is_manual)
+        end
+
+        if remote_prog == local_prog then
+            if is_manual then
+                UIManager:show(Notification:new{ text = _("Already synchronized with cloud.") })
+            end
+            return true
+        end
+
+        local last_local_ts = self.last_page_turn_time or 0
+        if self.settings.last_sync_doc == doc_md5 and (self.settings.last_sync_time or 0) > last_local_ts then
+            last_local_ts = self.settings.last_sync_time
+        end
+
+        local should_pull = false
+        if remote_ts > 0 and last_local_ts > 0 then
+            should_pull = (remote_ts > last_local_ts)
+        else
+            should_pull = (remote_pct > local_pct + 0.005)
+        end
+
+        if should_pull then
+            return self:_pullDocument(is_manual)
+        else
+            return self:_pushDocument(is_manual)
+        end
     end
 end
 
@@ -448,7 +596,7 @@ end
 -- Uses NetworkMgr:isOnline() and completely suppresses errors.
 --------------------------------------------------------------------------------
 
-function Sink:_silentBackgroundSync(trigger_name)
+function Sink:_silentBackgroundSync(trigger_name, mode)
     if not self.settings.auto_sync then
         return
     end
@@ -459,9 +607,9 @@ function Sink:_silentBackgroundSync(trigger_name)
         return
     end
 
-    logger.info("Sink [" .. trigger_name .. "]: Device online. Performing silent sync.")
+    logger.info("Sink [" .. trigger_name .. "]: Device online. Performing silent sync (" .. tostring(mode or "full") .. ").")
     local ok, err = pcall(function()
-        self:_syncDocument(false)
+        self:_syncDocument(mode or "full", false)
     end)
     if not ok then
         -- Suppress all background errors
@@ -469,20 +617,32 @@ function Sink:_silentBackgroundSync(trigger_name)
     end
 end
 
+function Sink:onPageUpdate(page)
+    self.last_page_turn_time = os.time()
+end
+
 function Sink:onReaderReady()
-    self:_silentBackgroundSync("onReaderReady")
+    if UIManager and UIManager.nextTick then
+        UIManager:nextTick(function()
+            self:_silentBackgroundSync("onReaderReady", "pull")
+        end)
+    else
+        self:_silentBackgroundSync("onReaderReady", "pull")
+    end
 end
 
 function Sink:onCloseDocument()
-    self:_silentBackgroundSync("onCloseDocument")
+    self.last_page_turn_time = os.time()
+    self:_silentBackgroundSync("onCloseDocument", "push")
 end
 
 function Sink:onSuspend()
-    self:_silentBackgroundSync("onSuspend")
+    self.last_page_turn_time = os.time()
+    self:_silentBackgroundSync("onSuspend", "push")
 end
 
 function Sink:onNetworkConnected()
-    self:_silentBackgroundSync("onNetworkConnected")
+    self:_silentBackgroundSync("onNetworkConnected", "full")
 end
 
 --------------------------------------------------------------------------------
@@ -640,7 +800,44 @@ function Sink:getMenuTable()
             end,
         },
 
-        -- 5. Server URL Configuration
+        -- 5. Document Matching Method
+        {
+            text_func = function()
+                local method = self.settings.checksum_method or "filename"
+                local label = method == "filename" and _("Filename (Cross-Device)") or _("Binary (Exact File)")
+                return string.format(_("Matching Method: %s"), label)
+            end,
+            sub_item_table = {
+                {
+                    text = _("Filename (Recommended for Phone / Calibre)"),
+                    checked_func = function()
+                        return (self.settings.checksum_method or "filename") == "filename"
+                    end,
+                    callback = function(touch_menu_instance)
+                        self.settings.checksum_method = "filename"
+                        self:saveSettings()
+                        if touch_menu_instance and touch_menu_instance.updateItems then
+                            pcall(function() touch_menu_instance:updateItems() end)
+                        end
+                    end,
+                },
+                {
+                    text = _("Binary (Strict byte-for-byte checksum)"),
+                    checked_func = function()
+                        return self.settings.checksum_method == "binary"
+                    end,
+                    callback = function(touch_menu_instance)
+                        self.settings.checksum_method = "binary"
+                        self:saveSettings()
+                        if touch_menu_instance and touch_menu_instance.updateItems then
+                            pcall(function() touch_menu_instance:updateItems() end)
+                        end
+                    end,
+                },
+            },
+        },
+
+        -- 6. Server URL Configuration
         {
             text_func = function()
                 local url = self.settings.server_url or ""

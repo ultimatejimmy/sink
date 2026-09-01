@@ -179,7 +179,7 @@ app.get("/", async (c) => {
         const res = await fetch('/api/session/' + encodeURIComponent(code) + '/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'primary_reader', userkey: 'sync_key_' + code })
+          body: JSON.stringify({ username: 'primary_reader' })
         });
         const data = await res.json();
 

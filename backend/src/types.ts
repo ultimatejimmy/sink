@@ -6,6 +6,7 @@ export interface Env {
 export interface User {
   username: string;
   password_hash: string;
+  sync_key?: string;
   created_at: string;
 }
 
