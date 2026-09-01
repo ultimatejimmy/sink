@@ -290,6 +290,10 @@ end
 function Sink:_applyRemoteProgress(remote_progress, remote_percentage)
     if not self.ui or not remote_progress then return end
 
+    if not Event then
+        pcall(function() Event = require("ui/event") end)
+    end
+
     local has_pages = self.ui.document and self.ui.document.info and self.ui.document.info.has_pages
 
     if Event and self.ui.handleEvent then
@@ -364,14 +368,16 @@ function Sink:_syncDocument(is_manual)
 
     local local_pct, local_prog = self:_getLocalProgress()
     if not local_pct or not local_prog then
-        logger.dbg("Sink: unable to extract local progress for document " .. tostring(doc_md5))
+        logger.warn("Sink: unable to extract local progress for document " .. tostring(doc_md5))
         return false
     end
+
+    logger.info(string.format("Sink: syncing document %s (local progress: %.1f%%, %s)", tostring(doc_md5), (local_pct or 0) * 100, tostring(local_prog)))
 
     -- 1. Fetch remote progress
     local res, err = self:_makeRequest("GET", "/syncs/progress/" .. doc_md5)
     if err or not res or (res.status ~= 200 and res.status ~= 201) then
-        logger.dbg("Sink: error fetching remote progress: " .. tostring(err or res and res.status))
+        logger.warn("Sink: error fetching remote progress: " .. tostring(err or res and res.status))
         if is_manual then
             UIManager:show(InfoMessage:new{
                 text = _("Failed to sync progress:\n") .. tostring(err or (res and res.raw) or "Unknown error"),
@@ -389,6 +395,7 @@ function Sink:_syncDocument(is_manual)
 
     -- 2. Compare: If remote progress exists and is further than local progress, apply remote
     if remote_pct and remote_prog and remote_pct > (local_pct + 0.0001) then
+        logger.info(string.format("Sink: pulling remote progress: %.1f%% (%s)", remote_pct * 100, remote.device or "Remote"))
         self:_applyRemoteProgress(remote_prog, remote_pct)
         self.settings.last_sync_time = remote_ts > 0 and remote_ts or os.time()
         self.settings.last_sync_doc = doc_md5
@@ -402,6 +409,7 @@ function Sink:_syncDocument(is_manual)
         return true
     else
         -- 3. Local progress is equal or further: push local progress to cloud
+        logger.info(string.format("Sink: pushing local progress: %.1f%% to cloud", (local_pct or 0) * 100))
         local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", {
             document = doc_md5,
             percentage = local_pct,
@@ -411,7 +419,7 @@ function Sink:_syncDocument(is_manual)
         })
 
         if push_err or not push_res or push_res.status ~= 200 then
-            logger.dbg("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
+            logger.warn("Sink: error pushing progress: " .. tostring(push_err or push_res and push_res.status))
             if is_manual then
                 UIManager:show(InfoMessage:new{
                     text = _("Failed to upload progress:\n") .. tostring(push_err or (push_res and push_res.raw) or "Unknown error"),
@@ -447,17 +455,17 @@ function Sink:_silentBackgroundSync(trigger_name)
 
     -- Non-intrusive check: is the device currently connected to Wi-Fi?
     if not NetworkMgr:isOnline() then
-        logger.dbg("Sink [" .. trigger_name .. "]: Device is offline. Silently skipping sync.")
+        logger.info("Sink [" .. trigger_name .. "]: Device is offline. Silently skipping sync.")
         return
     end
 
-    logger.dbg("Sink [" .. trigger_name .. "]: Device online. Performing silent sync.")
+    logger.info("Sink [" .. trigger_name .. "]: Device online. Performing silent sync.")
     local ok, err = pcall(function()
         self:_syncDocument(false)
     end)
     if not ok then
         -- Suppress all background errors
-        logger.dbg("Sink [" .. trigger_name .. "] silent sync error: " .. tostring(err))
+        logger.warn("Sink [" .. trigger_name .. "] silent sync error: " .. tostring(err))
     end
 end
 

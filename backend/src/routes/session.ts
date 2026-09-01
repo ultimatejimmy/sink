@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { Env, KosyncErrors } from "../types";
-import { ensureDatabase, createUser, getUserByUsername } from "../db";
+import { ensureDatabase, createUser, getUserByUsername, upsertUser } from "../db";
 import { hashPassword } from "../auth";
 
 export const sessionRouter = new Hono<{ Bindings: Env }>();
@@ -130,6 +130,39 @@ sessionRouter.post("/:id/submit", async (c) => {
   const db = c.env.DB;
   const now = Math.floor(Date.now() / 1000);
 
+  let session = memorySessions.get(sessionId);
+
+  if ((!session || session.expiresAt < Date.now()) && db) {
+    try {
+      await ensureSessionTable(db);
+      const row = await db
+        .prepare("SELECT status, username, userkey, expires_at FROM pairing_sessions WHERE session_id = ?")
+        .bind(sessionId)
+        .first<{ status: string; username: string; userkey: string; expires_at: number }>();
+
+      if (row && row.expires_at >= now) {
+        session = {
+          status: row.status,
+          username: row.username || "",
+          userkey: row.userkey || "",
+          expiresAt: row.expires_at * 1000,
+        };
+      }
+    } catch (err) {
+      console.warn("Error querying D1 session:", err);
+    }
+  }
+
+  if (!session || session.expiresAt < Date.now()) {
+    return c.json(
+      {
+        success: false,
+        error: "Pairing code not found or expired. Please check the code shown on your e-reader screen.",
+      },
+      404
+    );
+  }
+
   let body: { username?: string; userkey?: string };
   try {
     body = await c.req.json();
@@ -141,17 +174,14 @@ sessionRouter.post("/:id/submit", async (c) => {
   const username = (body.username || "default_reader").trim();
   const userkey = (body.userkey || `sink_key_${sessionId}`).trim();
 
-  // Ensure user account exists in D1
+  // Ensure user account exists and has matching password hash in D1
   if (db) {
     try {
       await ensureDatabase(db);
-      const existing = await getUserByUsername(db, username);
-      if (!existing) {
-        const hash = await hashPassword(userkey);
-        await createUser(db, username, hash);
-      }
+      const hash = await hashPassword(userkey);
+      await upsertUser(db, username, hash);
     } catch (err) {
-      console.error("Error creating user during pairing:", err);
+      console.error("Error creating/updating user during pairing:", err);
     }
   }
 

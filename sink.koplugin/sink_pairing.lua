@@ -123,6 +123,7 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
         self.session_id = session_id
         self.is_pairing = true
         self.poll_count = 0
+        logger.info("Sink: started pairing session with code: " .. tostring(session_id))
 
         -- Format code with spaces for crystal clarity on e-ink (e.g. "K 9 X   2 P 4")
         local raw_code = session_id
@@ -232,6 +233,7 @@ function SinkPairing:pollSession(server_url, session_id, sink_plugin, on_complet
         if data and data.status == "ready" and data.username and data.userkey then
             -- Success! Apply credentials immediately
             self:stop()
+            logger.info("Sink: paired successfully as user " .. tostring(data.username))
             sink_plugin.settings.username = data.username
             sink_plugin.settings.userkey = data.userkey
             sink_plugin:saveSettings()

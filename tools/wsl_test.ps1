@@ -2,7 +2,7 @@ param (
     [switch]$Watch
 )
 
-# Ensure WSL passes software rendering and X11 driver flags
+# Ensure WSL passes software rendering and X11 driver flags to fix graphics crashes & black screen issues in Copy Mode
 $env:LIBGL_ALWAYS_SOFTWARE = "1"
 $env:SDL_VIDEO_DRIVER = "x11"
 $env:SDL_VIDEODRIVER = "x11"
@@ -21,43 +21,24 @@ foreach ($item in $EnvList) {
 }
 
 $WslHome = (wsl sh -c "echo -n ~").Trim()
+$PluginDir = "sink.koplugin"
 $WSLDest = "$WslHome/.config/koreader/plugins/sink.koplugin"
+
+# The .deb package installs system-wide, so the app directory is static
 $AppDir = "/usr/lib/koreader"
 Write-Host "Using KOReader installation path: $AppDir" -ForegroundColor Yellow
-
-# Locate plugin source directory
-$PluginPath = $null
-$Candidates = @(
-    "$PSScriptRoot/..",
-    "$PSScriptRoot/../sink.koplugin",
-    "$PSScriptRoot/../../sink/sink.koplugin",
-    "./sink/sink.koplugin",
-    "./sink.koplugin",
-    "."
-)
-foreach ($c in $Candidates) {
-    if (Test-Path "$c/_meta.lua") {
-        $PluginPath = (Get-Item $c).FullName
-        break
-    }
-}
-
-if (-not $PluginPath) {
-    Write-Host "Error: Could not locate sink.koplugin source directory with _meta.lua." -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Detected Plugin Source: $PluginPath" -ForegroundColor Gray
 
 function Run-Workflow {
     Write-Host "`n--- Starting Verification Workflow for Sink ---" -ForegroundColor Cyan
     
-    # 1. Sync to WSL
+    # 1. Sync
     Write-Host "Syncing to WSL..." -NoNewline
-    $WslSrc = (wsl wslpath -a -u "$PluginPath").Trim()
+    wsl mkdir -p "$WslHome/.config/koreader/plugins"
     
-    wsl bash -c "mkdir -p '$WslHome/.config/koreader/plugins'"
-    wsl bash -c "rsync -rv --delete --exclude='.git' --exclude='*.log' '$WslSrc/' '$WSLDest/'"
+    # Identify source directory
+    $SrcDir = if (Test-Path "./sink.koplugin") { "./sink.koplugin/" } elseif (Test-Path "./sink/sink.koplugin") { "./sink/sink.koplugin/" } elseif (Test-Path "./_meta.lua") { "./" } else { "../sink.koplugin/" }
+    
+    wsl rsync -rv --delete --exclude=".git" --exclude="*.log" "$SrcDir" "$WSLDest/"
     if ($LASTEXITCODE -ne 0) {
         Write-Host " FAILED" -ForegroundColor Red
         return $false
@@ -69,8 +50,8 @@ function Run-Workflow {
     
     # Test 1: _meta.lua verification
     Write-Host "Running _meta.lua verification test..."
-    $MetaTestCmd = "cd $AppDir && LUA_PATH='$WSLDest/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit $WSLDest/tests/sink_meta_test.lua"
-    wsl bash -c "$MetaTestCmd"
+    $MetaTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit {0}/tests/sink_meta_test.lua" -f $WSLDest
+    wsl bash -c `"$MetaTestCmd`"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Meta Tests FAILED." -ForegroundColor Red
         return $false
@@ -78,8 +59,8 @@ function Run-Workflow {
 
     # Test 2: main.lua module verification
     Write-Host "Running main.lua plugin logic tests..."
-    $ModuleTestCmd = "cd $AppDir && LUA_PATH='$WSLDest/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit $WSLDest/tests/sink_module_test.lua"
-    wsl bash -c "$ModuleTestCmd"
+    $ModuleTestCmd = "cd $AppDir && LUA_PATH='{0}/?.lua;./?.lua;./?/init.lua;frontend/?.lua;frontend/?/init.lua;libs/?.lua;common/?.lua;common/?/init.lua;;' LUA_CPATH='libs/libkoreader-?.so;libs/?.so;./?.so;;' ./luajit {0}/tests/sink_module_test.lua" -f $WSLDest
+    wsl bash -c `"$ModuleTestCmd`"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Plugin Module Tests FAILED." -ForegroundColor Red
         return $false
@@ -87,22 +68,28 @@ function Run-Workflow {
 
     Write-Host "All Tests PASSED" -ForegroundColor Green
 
-    # 3. Restart KOReader in background
+    # 3. Restart KOReader
     Write-Host "Restarting KOReader..." -ForegroundColor Cyan
-    wsl bash -c "pkill -9 -f koreader || true"
-    Start-Sleep -Milliseconds 500
+    wsl pkill -9 -f koreader 2>$null
+    Start-Sleep -Seconds 1
 
-    Write-Host "Starting KOReader in WSL..."
-    wsl bash -c "nohup dbus-launch --exit-with-session /usr/bin/koreader >/dev/null 2>&1 &"
+    # Define start command
+    $DefaultCmd = "C:\Windows\System32\wsl.exe --exec dbus-launch --exit-with-session bash -c `"/usr/bin/koreader`""
+    $StartCmd = if ($env:KOREADER_START_CMD) { $env:KOREADER_START_CMD } else { $DefaultCmd }
+    
+    Write-Host "Starting KOReader: $StartCmd"
+    # Use cmd /c start to ensure it's fully detached and quotes are preserved
+    $cmdLine = "/c start `"`" $StartCmd"
+    Start-Process cmd.exe -ArgumentList $cmdLine -WindowStyle Hidden
 
     Write-Host "`nReady!" -ForegroundColor Green
     return $true
 }
 
 if ($Watch) {
-    Write-Host "Watching for changes in $PluginPath..." -ForegroundColor Magenta
+    Write-Host "Watching for changes..." -ForegroundColor Magenta
     $watcher = New-Object System.IO.FileSystemWatcher
-    $watcher.Path = $PluginPath
+    $watcher.Path = (Get-Item ".").FullName
     $watcher.Filter = "*.lua"
     $watcher.IncludeSubdirectories = $true
     $watcher.EnableRaisingEvents = $true

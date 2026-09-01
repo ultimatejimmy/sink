@@ -82,6 +82,23 @@ export async function createUser(
   return result.success;
 }
 
+export async function upsertUser(
+  db: D1Database,
+  username: string,
+  passwordHash: string
+): Promise<boolean> {
+  await ensureDatabase(db);
+  const result = await db
+    .prepare(`
+      INSERT INTO users (username, password_hash) VALUES (?, ?)
+      ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash
+    `)
+    .bind(username, passwordHash)
+    .run();
+
+  return result.success;
+}
+
 export async function getProgress(
   db: D1Database,
   username: string,

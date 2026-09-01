@@ -32,6 +32,9 @@ package.loaded["ui/widget/buttondialog"] = { new = function(self, o) return o en
 package.loaded["device"] = { model = "TestModel", id = "test_id_123" }
 package.loaded["logger"] = { dbg = function() end, info = function() end, warn = function() end }
 package.loaded["gettext"] = function(s) return s end
+package.loaded["ui/event"] = {
+    new = function(self, name, arg) return { name = name, arg = arg } end
+}
 
 -- Mock JSON & Network dependencies for unit test isolation
 if not package.loaded["json"] then
@@ -168,9 +171,6 @@ local handled_event = nil
 paged_ui.handleEvent = function(self, evt)
     handled_event = evt
 end
-package.loaded["ui/event"] = {
-    new = function(self, name, arg) return { name = name, arg = arg } end
-}
 paged_inst:_applyRemoteProgress("75", 0.375)
 assert(handled_event and handled_event.name == "GotoPage" and handled_event.arg == 75, "Should dispatch GotoPage event for paged documents")
 

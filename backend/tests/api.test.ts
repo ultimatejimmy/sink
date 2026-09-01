@@ -85,6 +85,28 @@ describe("KOReader Kosync API Endpoints", () => {
       expect(pollData.username).toBe("my_kindle");
       expect(pollData.userkey).toBe("secret_sync_key");
     });
+
+    it("updates credentials and allows authentication after re-pairing", async () => {
+      // 1. Initial pairing
+      const createRes1 = await app.request("/api/session/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, env);
+      const { session_id: s1 } = await createRes1.json<any>();
+      await app.request(`/api/session/${s1}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "primary_reader", userkey: "key_v1" }) }, env);
+
+      // 2. Auth check with key_v1 works
+      const authRes1 = await app.request("/users/auth", { method: "GET", headers: { "x-auth-user": "primary_reader", "x-auth-key": "key_v1" } }, env);
+      expect(authRes1.status).toBe(200);
+
+      // 3. Re-pair with new session & key_v2
+      const createRes2 = await app.request("/api/session/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, env);
+      const { session_id: s2 } = await createRes2.json<any>();
+      await app.request(`/api/session/${s2}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "primary_reader", userkey: "key_v2" }) }, env);
+
+      // 4. Auth check with key_v2 succeeds
+      const authRes2 = await app.request("/users/auth", { method: "GET", headers: { "x-auth-user": "primary_reader", "x-auth-key": "key_v2" } }, env);
+      expect(authRes2.status).toBe(200);
+      const authData = await authRes2.json<any>();
+      expect(authData.authorized).toBe("OK");
+    });
   });
 
   describe("User Registration (/users/create)", () => {
