@@ -132,77 +132,50 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
             raw_code:sub(4,4), raw_code:sub(5,5), raw_code:sub(6,6)
         )
 
-        -- 2. Build Clean E-Ink UI Card using ButtonDialog + VerticalGroup
-        local dialog_width = math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.85)
-        local base_fs = 20
-        pcall(function()
-            if Size and Size.font and Size.font.default then base_fs = Size.font.default end
-        end)
+        -- 2. Build Crash-Safe E-Ink & Touch UI Card using standard TextBoxWidget + ButtonDialog
+        local TextBoxWidget = require("ui/widget/textboxwidget")
+        local pair_text = string.format(
+            _("1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"),
+            server_url,
+            formatted_code
+        )
 
-        local vg_components = {
-            VerticalSpan:new{ width = Size.span.horizontal_large or 15 },
-            CenterContainer:new{
-                dimen = { w = dialog_width, h = 30 },
-                TextWidget:new{
-                    text = _("PAIR YOUR DEVICE"),
-                    face = Font:getFace("cfont", math.floor(base_fs * 1.1)),
-                    bold = true,
+        local ok_dlg, dlg = pcall(function()
+            return ButtonDialog:new{
+                title = _("Pair Device (Sink)"),
+                title_align = "center",
+                use_info_style = false,
+                _added_widgets = {
+                    TextBoxWidget:new{
+                        text = pair_text,
+                        face = Font:getFace("infofont"),
+                        alignment = "center",
+                    }
                 },
-            },
-            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
-            TextWidget:new{
-                text = _("1. On Phone or PC, open:"),
-                face = Font:getFace("cfont", base_fs),
-                padding = 5,
-            },
-            TextWidget:new{
-                text = server_url,
-                face = Font:getFace("cfont", math.floor(base_fs * 0.95)),
-                bold = true,
-                padding = 5,
-            },
-            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
-            TextWidget:new{
-                text = _("2. Enter Code:"),
-                face = Font:getFace("cfont", base_fs),
-                padding = 5,
-            },
-            CenterContainer:new{
-                dimen = { w = dialog_width, h = 45 },
-                TextWidget:new{
-                    text = "[ " .. formatted_code .. " ]",
-                    face = Font:getFace("cfont", math.floor(base_fs * 1.4)),
-                    bold = true,
-                },
-            },
-            VerticalSpan:new{ width = Size.span.horizontal_medium or 10 },
-            CenterContainer:new{
-                dimen = { w = dialog_width, h = 25 },
-                TextWidget:new{
-                    text = _("(Waiting for confirmation...)"),
-                    face = Font:getFace("cfont", math.floor(base_fs * 0.85)),
-                },
-            },
-            VerticalSpan:new{ width = Size.span.horizontal_large or 15 },
-        }
-
-        local vg = VerticalGroup:new(vg_components)
-
-        self.dialog = ButtonDialog:new{
-            _added_widgets = { vg },
-            buttons = {
-                {
+                buttons = {
                     {
-                        text = _("Cancel"),
-                        is_enter_default = true,
-                        callback = function()
-                            self:stop()
-                        end,
+                        {
+                            text = _("Cancel"),
+                            id = "close",
+                            callback = function()
+                                self:stop()
+                            end,
+                        },
                     },
                 },
-            },
-        }
-        UIManager:show(self.dialog)
+            }
+        end)
+
+        if ok_dlg and dlg then
+            self.dialog = dlg
+            UIManager:show(self.dialog)
+        else
+            -- Ultimate fallback for minimal environments
+            self.dialog = InfoMessage:new{
+                text = pair_text,
+            }
+            UIManager:show(self.dialog)
+        end
 
         -- 3. Start Polling Loop
         self:pollSession(server_url, session_id, sink_plugin, on_complete)

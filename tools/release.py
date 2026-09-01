@@ -88,7 +88,7 @@ def main():
             except subprocess.CalledProcessError as e:
                 print(f"Warning: Failed to push to {remote}: {e}")
             
-        print(f"\n✅ Release {new_version} completed and pushed successfully!")
+        print(f"\n[SUCCESS] Release {new_version} completed and pushed successfully!")
     except subprocess.CalledProcessError as e:
         print(f"Error during git operations: {e}")
         sys.exit(1)

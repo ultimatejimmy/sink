@@ -526,27 +526,23 @@ local function injectSinkIntoToolsMenu()
         "ui/elements/reader_menu_order",
         "ui/elements/filemanager_menu_order",
     }
-    local function isItemInOrder(tbl, target_id)
-        if type(tbl) ~= "table" then return false end
-        for _, val in pairs(tbl) do
-            if val == target_id then
-                return true
-            elseif type(val) == "table" then
-                if isItemInOrder(val, target_id) then
-                    return true
-                end
+    local function removeItem(tbl, target_id)
+        if type(tbl) ~= "table" then return end
+        for k, v in pairs(tbl) do
+            if v == target_id then
+                table.remove(tbl, k)
+                return
+            elseif type(v) == "table" then
+                removeItem(v, target_id)
             end
         end
-        return false
     end
 
     for _, order_path in ipairs(menu_orders) do
         local ok, order = pcall(require, order_path)
         if ok and type(order) == "table" and type(order.tools) == "table" then
-            if not isItemInOrder(order, "sink_sync") then
-                local insert_idx = math.min(4, #order.tools + 1)
-                table.insert(order.tools, insert_idx, "sink_sync")
-            end
+            removeItem(order, "sink_sync")
+            table.insert(order.tools, 1, "sink_sync")
         end
     end
 end
