@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sink",
+  "name": "sinkdb",
   "main": "src/index.ts",
   "compatibility_date": "2024-09-23",
   "compatibility_flags": ["nodejs_compat"],
@@ -8,7 +8,7 @@
     {
       "binding": "DB",
       "database_name": "sink_db",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "afe01f27-4cb9-40d5-a06c-8af5d50460ce"
     }
   ]
 }
