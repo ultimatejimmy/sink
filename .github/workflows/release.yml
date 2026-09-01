@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '**' # Matches any tag
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Plugin Archive
+        run: |
+          # Package the sink.koplugin directory into a zip file
+          # Excluding hidden files and git metadata
+          zip -r sink.koplugin.zip sink.koplugin -x "*.git*" "*/.*" "*__pycache__*"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            sink.koplugin.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
