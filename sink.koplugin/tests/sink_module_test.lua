@@ -29,12 +29,20 @@ package.loaded["ui/widget/infomessage"] = { new = function(self, o) return o end
 package.loaded["ui/widget/inputdialog"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/confirmbox"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/buttondialog"] = { new = function(self, o) return o end }
-package.loaded["device"] = { model = "TestModel", id = "test_id_123" }
+package.loaded["device"] = { model = "TestModel", id = "test_id_123", screen = { scaleBySize = function(self, s) return s end } }
 package.loaded["logger"] = { dbg = function() end, info = function() end, warn = function() end }
 package.loaded["gettext"] = function(s) return s end
 package.loaded["ui/event"] = {
     new = function(self, name, arg) return { name = name, arg = arg } end
 }
+package.loaded["ui/font"] = { getFace = function() return "mock_face" end }
+package.loaded["ui/size"] = { padding = { default = 6, small = 4 } }
+package.loaded["ui/widget/textboxwidget"] = { new = function(self, o) return o end }
+package.loaded["ui/widget/textwidget"] = { new = function(self, o) return o end }
+package.loaded["ui/widget/verticalspan"] = { new = function(self, o) return o end }
+package.loaded["ui/widget/verticalgroup"] = mock_widget_container
+package.loaded["ui/widget/container/centercontainer"] = mock_widget_container
+package.loaded["ui/widget/container/framecontainer"] = mock_widget_container
 
 -- Mock JSON & Network dependencies for unit test isolation
 if not package.loaded["json"] then
@@ -179,5 +187,16 @@ test_ui.handleEvent = function(self, evt)
 end
 test_inst:_applyRemoteProgress("/body/div[3]", 0.5)
 assert(handled_event and handled_event.name == "GotoXPointer" and handled_event.arg == "/body/div[3]", "Should dispatch GotoXPointer event for reflowable documents")
+
+-- Test 6: SinkPairing module loads cleanly and has startPairing/stop methods
+local pairing = require("sink_pairing")
+assert(type(pairing) == "table", "sink_pairing module should load as table")
+assert(type(pairing.startPairing) == "function", "startPairing should be a function")
+assert(type(pairing.stop) == "function", "stop should be a function")
+
+-- Test 7: SinkPairing:_buildPairingDialog generates valid dialog with widgets
+local dlg = pairing:_buildPairingDialog("https://sink.test", "ABC123")
+assert(dlg ~= nil, "_buildPairingDialog should return a dialog instance")
+assert(dlg._added_widgets ~= nil and #dlg._added_widgets >= 1, "Dialog should contain added widgets")
 
 print("✓ Sink main.lua module tests PASSED!")

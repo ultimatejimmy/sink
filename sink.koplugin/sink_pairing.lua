@@ -19,6 +19,13 @@ local ltn12 = require("ltn12")
 local _ = require("gettext")
 local logger = require("logger")
 
+local Blitbuffer = nil
+pcall(function() Blitbuffer = require("ffi/blitbuffer") end)
+local FrameContainer = nil
+pcall(function() FrameContainer = require("ui/widget/container/framecontainer") end)
+local QRWidget = nil
+pcall(function() QRWidget = require("ui/widget/qrwidget") end)
+
 local SinkPairing = {
     dialog = nil,
     session_id = nil,
@@ -125,61 +132,109 @@ function SinkPairing:startPairing(sink_plugin, on_complete)
         self.poll_count = 0
         logger.info("Sink: started pairing session with code: " .. tostring(session_id))
 
-        -- Format code with spaces for crystal clarity on e-ink (e.g. "K 9 X   2 P 4")
-        local raw_code = session_id
-        local formatted_code = string.format("%s %s %s   %s %s %s",
-            raw_code:sub(1,1), raw_code:sub(2,2), raw_code:sub(3,3),
-            raw_code:sub(4,4), raw_code:sub(5,5), raw_code:sub(6,6)
-        )
-
-        -- 2. Build Crash-Safe E-Ink & Touch UI Card using standard TextBoxWidget + ButtonDialog
-        local TextBoxWidget = require("ui/widget/textboxwidget")
-        local pair_text = string.format(
-            _("1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"),
-            server_url,
-            formatted_code
-        )
-
-        local ok_dlg, dlg = pcall(function()
-            return ButtonDialog:new{
-                title = _("Pair Device (Sink)"),
-                title_align = "center",
-                use_info_style = false,
-                _added_widgets = {
-                    TextBoxWidget:new{
-                        text = pair_text,
-                        face = Font:getFace("infofont"),
-                        alignment = "center",
-                    }
-                },
-                buttons = {
-                    {
-                        {
-                            text = _("Cancel"),
-                            id = "close",
-                            callback = function()
-                                self:stop()
-                            end,
-                        },
-                    },
-                },
-            }
-        end)
-
-        if ok_dlg and dlg then
-            self.dialog = dlg
-            UIManager:show(self.dialog)
-        else
-            -- Ultimate fallback for minimal environments
-            self.dialog = InfoMessage:new{
-                text = pair_text,
-            }
-            UIManager:show(self.dialog)
-        end
+        self.dialog = self:_buildPairingDialog(server_url, session_id)
+        UIManager:show(self.dialog)
 
         -- 3. Start Polling Loop
         self:pollSession(server_url, session_id, sink_plugin, on_complete)
     end)
+end
+
+function SinkPairing:_buildPairingDialog(server_url, session_id)
+    -- Format code with spaces for crystal clarity on e-ink (e.g. "K 9 X   2 P 4")
+    local raw_code = session_id or ""
+    local formatted_code = string.format("%s %s %s   %s %s %s",
+        raw_code:sub(1,1), raw_code:sub(2,2), raw_code:sub(3,3),
+        raw_code:sub(4,4), raw_code:sub(5,5), raw_code:sub(6,6)
+    )
+
+    -- Build Crash-Safe E-Ink & Touch UI Card with QR Code and Pairing Code
+    local TextBoxWidget = require("ui/widget/textboxwidget")
+    local pair_url = (server_url or "") .. "/?s=" .. (session_id or "")
+
+    local added_widgets = {}
+    local qr_created = false
+
+    if QRWidget and FrameContainer and Blitbuffer then
+        local ok_qr, qr_w = pcall(function()
+            local qr_size = Screen and Screen.scaleBySize and Screen:scaleBySize(170) or 170
+            local qr = QRWidget:new{
+                text = pair_url,
+                width = qr_size,
+                height = qr_size,
+            }
+            if qr and qr.image then
+                local pad = Size and Size.padding and Size.padding.default or 6
+                return FrameContainer:new{
+                    background = Blitbuffer.COLOR_WHITE,
+                    padding = pad,
+                    bordersize = 0,
+                    qr,
+                }
+            end
+            return nil
+        end)
+        if ok_qr and qr_w then
+            table.insert(added_widgets, TextBoxWidget:new{
+                text = _("Scan with your phone to pair instantly:"),
+                face = Font:getFace("infofont"),
+                alignment = "center",
+            })
+            table.insert(added_widgets, VerticalSpan:new{ width = Size and Size.padding and Size.padding.small or 4 })
+            table.insert(added_widgets, qr_w)
+            table.insert(added_widgets, VerticalSpan:new{ width = Size and Size.padding and Size.padding.small or 4 })
+            table.insert(added_widgets, TextBoxWidget:new{
+                text = string.format(
+                    _("Or open: %s\nand enter code: [ %s ]\n\n(Waiting for confirmation...)"),
+                    server_url,
+                    formatted_code
+                ),
+                face = Font:getFace("infofont"),
+                alignment = "center",
+            })
+            qr_created = true
+        end
+    end
+
+    local fallback_text = string.format(
+        _("1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"),
+        server_url,
+        formatted_code
+    )
+
+    if not qr_created then
+        table.insert(added_widgets, TextBoxWidget:new{
+            text = fallback_text,
+            face = Font:getFace("infofont"),
+            alignment = "center",
+        })
+    end
+
+    local ok_dlg, dlg = pcall(function()
+        return ButtonDialog:new{
+            title = _("Pair Device (Sink)"),
+            title_align = "center",
+            use_info_style = false,
+            _added_widgets = added_widgets,
+            buttons = {
+                {
+                    {
+                        text = _("Cancel"),
+                        id = "close",
+                        callback = function()
+                            self:stop()
+                        end,
+                    },
+                },
+            },
+        }
+    end)
+
+    if ok_dlg and dlg then
+        return dlg
+    else
+        return InfoMessage:new{ text = fallback_text }
+    end
 end
 
 function SinkPairing:pollSession(server_url, session_id, sink_plugin, on_complete)
