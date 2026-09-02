@@ -412,24 +412,24 @@ function Sink:_applyRemoteProgress(remote_progress, remote_percentage)
 end
 
 function Sink:_getDeviceInfo()
-    local model = "Kindle"
-    local device_id = "kindle_device"
-
+    local model = "KOReader"
     if Device then
-        if Device.getModel then
-            pcall(function() model = Device:getModel() end)
-        elseif Device.model then
+        if Device.model then
             model = tostring(Device.model)
-        end
-
-        if Device.getDeviceId then
-            pcall(function() device_id = Device:getDeviceId() end)
-        elseif Device.id then
-            device_id = tostring(Device.id)
+        elseif Device.getModel then
+            pcall(function() model = tostring(Device:getModel()) end)
         end
     end
 
-    return model, device_id
+    if not self.settings.device_id or self.settings.device_id == "" or self.settings.device_id == "kindle_device" then
+        local clean_model = model:lower():gsub("[^%w]+", "_"):gsub("^_+", ""):gsub("_+$", "")
+        if clean_model == "" then clean_model = "reader" end
+        local rand_suffix = string.format("%04x", math.random(0, 0xffff))
+        self.settings.device_id = clean_model .. "_" .. rand_suffix
+        self:saveSettings()
+    end
+
+    return model, self.settings.device_id
 end
 
 --------------------------------------------------------------------------------
