@@ -1250,8 +1250,12 @@ function Sink:showPairedDevicesDialog()
         single_line = true,
         with_dots = true,
         is_borderless = false,
+        is_popout = false,
         on_close_callback = function() end,
     }
+    if dev_menu[1] and dev_menu[1].radius then
+        dev_menu[1].radius = 0
+    end
     UIManager:show(dev_menu)
 end
 
@@ -1330,8 +1334,12 @@ function Sink:showCloudLibraryDialog()
         single_line = true,
         with_dots = true,
         is_borderless = false,
+        is_popout = false,
         on_close_callback = function() end,
     }
+    if lib_menu[1] and lib_menu[1].radius then
+        lib_menu[1].radius = 0
+    end
     UIManager:show(lib_menu)
 end
 
