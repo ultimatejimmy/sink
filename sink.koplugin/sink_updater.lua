@@ -169,6 +169,16 @@ function M:showUpdateDialog(sink_instance)
         end
 
         local ButtonDialog = require("ui/widget/buttondialog")
+        local TextBoxWidget = require("ui/widget/textboxwidget")
+        local Font = require("ui/font")
+        local added_widgets = {
+            TextBoxWidget:new{
+                text = msg,
+                face = Font:getFace("infofont"),
+                alignment = "left",
+            }
+        }
+
         local buttons = {
             {
                 {
@@ -184,12 +194,14 @@ function M:showUpdateDialog(sink_instance)
             },
         }
 
-        UIManager:show(ButtonDialog:new{
+        local update_dlg = ButtonDialog:new{
             title = _("Sink Updates & Version"),
-            use_info_style = true,
-            info_text = msg,
+            title_align = "center",
+            use_info_style = false,
+            _added_widgets = added_widgets,
             buttons = buttons,
-        })
+        }
+        UIManager:show(update_dlg)
     end)
 end
 
