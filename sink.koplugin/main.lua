@@ -1201,7 +1201,8 @@ function Sink:showPairedDevicesDialog()
         return
     end
 
-    local lines = {}
+    local Menu = require("ui/widget/menu")
+    local menu_items = {}
     for idx, dev in ipairs(devices) do
         local ts = tonumber(dev.last_sync_at)
         local last_sync = _("Unknown")
@@ -1210,23 +1211,42 @@ function Sink:showPairedDevicesDialog()
         end
         local model = tostring(dev.device_model or "Reader")
         local id_str = tostring(dev.device_id or "")
-        table.insert(lines, string.format("%d. %s (%s)\n   %s: %s", idx, model, id_str, _("Last active"), last_sync))
+        local is_current = (id_str == self.settings.device_id)
+
+        local label = string.format("%s (%s)%s", model, id_str, is_current and _(" [This Device]") or "")
+        local subtitle = string.format(_("Last active: %s"), last_sync)
+
+        table.insert(menu_items, {
+            text = label .. "\n  " .. subtitle,
+            keep_menu_open = true,
+            callback = function(touch_menu_instance)
+                local ConfirmBox = require("ui/widget/confirmbox")
+                UIManager:show(ConfirmBox:new{
+                    text = string.format(_("Remove device '%s' (%s) from your server?"), model, id_str),
+                    ok_text = _("Remove"),
+                    cancel_text = _("Cancel"),
+                    ok_callback = function()
+                        local del_res, del_err = self:_makeRequest("DELETE", "/syncs/devices/" .. id_str)
+                        if del_res and del_res.status == 200 then
+                            UIManager:show(Notification:new{ text = _("Device removed.") })
+                            self:showPairedDevicesDialog()
+                        else
+                            UIManager:show(InfoMessage:new{ text = _("Failed to remove device: ") .. tostring(del_err or (del_res and del_res.raw) or "") })
+                        end
+                    end,
+                })
+            end,
+        })
     end
 
-    local ButtonDialog = require("ui/widget/buttondialog")
-    UIManager:show(ButtonDialog:new{
+    local dev_menu
+    dev_menu = Menu:new{
         title = _("Paired Devices"),
-        use_info_style = true,
-        info_text = table.concat(lines, "\n\n"),
-        buttons = {
-            {
-                {
-                    text = _("Close"),
-                    callback = function() end,
-                },
-            },
-        },
-    })
+        item_table = menu_items,
+        is_borderless = false,
+        on_close_callback = function() end,
+    }
+    UIManager:show(dev_menu)
 end
 
 function Sink:showCloudLibraryDialog()
@@ -1245,7 +1265,8 @@ function Sink:showCloudLibraryDialog()
         return
     end
 
-    local lines = {}
+    local Menu = require("ui/widget/menu")
+    local menu_items = {}
     for idx, b in ipairs(books) do
         local pct = (tonumber(b.percentage) or 0) * 100
         local raw_title = b.title
@@ -1260,23 +1281,43 @@ function Sink:showCloudLibraryDialog()
             pcall(function() date_str = os.date("%Y-%m-%d", ts) end)
         end
         local dev_name = tostring(b.device or "Reader")
-        table.insert(lines, string.format("%d. %s%s\n   %.1f%% • %s (%s)", idx, raw_title, author, pct, date_str, dev_name))
+        local doc_hash = b.document_hash
+
+        local item_text = string.format("%s%s\n  %.1f%% • %s (%s)", raw_title, author, pct, date_str, dev_name)
+
+        table.insert(menu_items, {
+            text = item_text,
+            keep_menu_open = true,
+            callback = function(touch_menu_instance)
+                local ConfirmBox = require("ui/widget/confirmbox")
+                UIManager:show(ConfirmBox:new{
+                    text = string.format(_("Book: %s%s\nProgress: %.1f%%\nLast Device: %s\nLast Sync: %s\n\nRemove this book's progress from cloud server?"), raw_title, author, pct, dev_name, date_str),
+                    ok_text = _("Remove from Cloud"),
+                    cancel_text = _("Close"),
+                    ok_callback = function()
+                        if doc_hash then
+                            local del_res, del_err = self:_makeRequest("DELETE", "/syncs/books/" .. doc_hash)
+                            if del_res and del_res.status == 200 then
+                                UIManager:show(Notification:new{ text = _("Book removed from cloud library.") })
+                                self:showCloudLibraryDialog()
+                            else
+                                UIManager:show(InfoMessage:new{ text = _("Failed to delete book: ") .. tostring(del_err or (del_res and del_res.raw) or "") })
+                            end
+                        end
+                    end,
+                })
+            end,
+        })
     end
 
-    local ButtonDialog = require("ui/widget/buttondialog")
-    UIManager:show(ButtonDialog:new{
+    local lib_menu
+    lib_menu = Menu:new{
         title = _("Synced Books (Cloud Library)"),
-        use_info_style = true,
-        info_text = table.concat(lines, "\n\n"),
-        buttons = {
-            {
-                {
-                    text = _("Close"),
-                    callback = function() end,
-                },
-            },
-        },
-    })
+        item_table = menu_items,
+        is_borderless = false,
+        on_close_callback = function() end,
+    }
+    UIManager:show(lib_menu)
 end
 
 function Sink:showWelcomeDialog()
