@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Env, UpdateProgressPayload, ProgressResponse, KosyncErrors } from "../types";
+import { Env, UpdateProgressPayload, ProgressResponse, KosyncErrors, normalizeBookKey } from "../types";
 import { requireAuth, isValidKeyField, isValidString } from "../auth";
 import { getProgress, upsertProgress } from "../db";
 
