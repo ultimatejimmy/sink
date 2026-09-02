@@ -171,26 +171,21 @@ function M:showUpdateDialog(sink_instance)
                     expected_backend
                 )
 
+                local ButtonDialog = require("ui/widget/buttondialog")
+                local TextBoxWidget = require("ui/widget/textboxwidget")
+                local Font = require("ui/font")
+
+                local plugin_needs_update = info.has_update and info.download_url ~= nil
+                local backend_needs_update = backend_ver ~= "Unknown"
+                    and _versionLessThan(backend_ver, expected_backend)
+
+                -- Status lines
                 if info.has_update then
-                    msg = msg .. "\n" .. _("A newer version of the Sink plugin is available!")
-                    if info.download_url then
-                        UIManager:show(ConfirmBox:new{
-                            text = msg .. "\n\n" .. _("Download and install update now?"),
-                            ok_text = _("Update Plugin"),
-                            cancel_text = _("Cancel"),
-                            ok_callback = function()
-                                self:downloadAndInstall(info.download_url, info.remote_version)
-                            end,
-                        })
-                        return
-                    end
+                    msg = msg .. "\n" .. _("⬆ Plugin update available!")
                 else
                     msg = msg .. "\n" .. _("✓ Plugin is up to date.")
                 end
 
-                local ButtonDialog = require("ui/widget/buttondialog")
-                local TextBoxWidget = require("ui/widget/textboxwidget")
-                local Font = require("ui/font")
                 local added_widgets = {
                     TextBoxWidget:new{
                         text = msg,
@@ -199,32 +194,44 @@ function M:showUpdateDialog(sink_instance)
                     }
                 }
 
+                -- Build button row dynamically — only show action buttons when needed
                 local update_dlg
-                local buttons = {
-                    {
-                        {
-                            text = _("Update Backend Now"),
-                            callback = function()
-                                UIManager:close(update_dlg)
-                                self:triggerBackendUpgrade(sink_instance)
-                            end,
-                        },
-                        {
-                            text = _("Close"),
-                            id = "close",
-                            callback = function()
-                                UIManager:close(update_dlg)
-                            end,
-                        },
-                    },
-                }
+                local btn_row = {}
+
+                if plugin_needs_update then
+                    table.insert(btn_row, {
+                        text = _("Update Plugin"),
+                        callback = function()
+                            UIManager:close(update_dlg)
+                            self:downloadAndInstall(info.download_url, info.remote_version)
+                        end,
+                    })
+                end
+
+                if backend_needs_update then
+                    table.insert(btn_row, {
+                        text = _("Update Backend"),
+                        callback = function()
+                            UIManager:close(update_dlg)
+                            self:triggerBackendUpgrade(sink_instance)
+                        end,
+                    })
+                end
+
+                table.insert(btn_row, {
+                    text = _("Close"),
+                    id = "close",
+                    callback = function()
+                        UIManager:close(update_dlg)
+                    end,
+                })
 
                 update_dlg = ButtonDialog:new{
                     title = _("Sink Updates & Version"),
                     title_align = "center",
                     use_info_style = false,
                     _added_widgets = added_widgets,
-                    buttons = buttons,
+                    buttons = { btn_row },
                 }
                 UIManager:show(update_dlg)
             end)
