@@ -177,13 +177,11 @@ function M:showUpdateDialog(sink_instance)
                 local ButtonDialog = require("ui/widget/buttondialog")
                 local TextBoxWidget = require("ui/widget/textboxwidget")
                 local Font = require("ui/font")
-                local Screen = require("device/screen")
                 local added_widgets = {
                     TextBoxWidget:new{
                         text = msg,
                         face = Font:getFace("infofont"),
                         alignment = "left",
-                        width = math.floor(Screen:getWidth() * 0.75),
                     }
                 }
 
