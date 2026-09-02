@@ -129,85 +129,99 @@ function M:showUpdateDialog(sink_instance)
     local Notification = require("ui/widget/notification")
     UIManager:show(Notification:new{ text = _("Checking for updates...") })
 
-    self:checkPluginUpdate(function(info, err)
-        if err or not info then
+    -- Defer the blocking network call so the notification renders and the
+    -- menu closes before we hit the socket. Without this the synchronous
+    -- HTTPS request blocks the UI thread mid-callback and crashes KOReader.
+    UIManager:scheduleIn(0.5, function()
+        local ok, schedule_err = pcall(function()
+            self:checkPluginUpdate(function(info, check_err)
+                if check_err or not info then
+                    UIManager:show(InfoMessage:new{
+                        text = _("Update check failed:\n") .. tostring(check_err or "Unknown error"),
+                    })
+                    return
+                end
+
+                local backend_ver = sink_instance.backend_version or "Unknown"
+                local expected_backend = "1.1.0"
+                local backend_status = (backend_ver == "Unknown") and _("Not reachable")
+                    or (_versionLessThan(backend_ver, expected_backend)
+                        and string.format(_("%s (Update recommended: %s)"), backend_ver, expected_backend)
+                        or string.format(_("%s (Up to date)"), backend_ver))
+
+                local msg = string.format(
+                    _("Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nTarget Backend: %s\n"),
+                    info.local_version,
+                    info.remote_version,
+                    backend_status,
+                    expected_backend
+                )
+
+                if info.has_update then
+                    msg = msg .. "\n" .. _("A newer version of the Sink plugin is available!")
+                    if info.download_url then
+                        UIManager:show(ConfirmBox:new{
+                            text = msg .. "\n\n" .. _("Download and install update now?"),
+                            ok_text = _("Update Plugin"),
+                            cancel_text = _("Cancel"),
+                            ok_callback = function()
+                                self:downloadAndInstall(info.download_url, info.remote_version)
+                            end,
+                        })
+                        return
+                    end
+                else
+                    msg = msg .. "\n" .. _("✓ Plugin is up to date.")
+                end
+
+                local ButtonDialog = require("ui/widget/buttondialog")
+                local TextBoxWidget = require("ui/widget/textboxwidget")
+                local Font = require("ui/font")
+                local Screen = require("device/screen")
+                local added_widgets = {
+                    TextBoxWidget:new{
+                        text = msg,
+                        face = Font:getFace("infofont"),
+                        alignment = "left",
+                        width = math.floor(Screen:getWidth() * 0.75),
+                    }
+                }
+
+                local update_dlg
+                local buttons = {
+                    {
+                        {
+                            text = _("Update Backend Now"),
+                            callback = function()
+                                UIManager:close(update_dlg)
+                                self:triggerBackendUpgrade(sink_instance)
+                            end,
+                        },
+                        {
+                            text = _("Close"),
+                            id = "close",
+                            callback = function()
+                                UIManager:close(update_dlg)
+                            end,
+                        },
+                    },
+                }
+
+                update_dlg = ButtonDialog:new{
+                    title = _("Sink Updates & Version"),
+                    title_align = "center",
+                    use_info_style = false,
+                    _added_widgets = added_widgets,
+                    buttons = buttons,
+                }
+                UIManager:show(update_dlg)
+            end)
+        end)
+        if not ok then
             UIManager:show(InfoMessage:new{
-                text = _("Update check failed:\n") .. tostring(err or "Unknown error"),
+                text = _("Update check error:\n") .. tostring(schedule_err),
             })
-            return
         end
-
-        local backend_ver = sink_instance.backend_version or "Unknown"
-        local expected_backend = "1.1.0"
-        local backend_status = (backend_ver == "Unknown") and _("Not reachable")
-            or (_versionLessThan(backend_ver, expected_backend) and string.format(_("%s (Update recommended: %s)"), backend_ver, expected_backend)
-            or string.format(_("%s (Up to date)"), backend_ver))
-
-        local msg = string.format(
-            _("Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nTarget Backend: %s\n"),
-            info.local_version,
-            info.remote_version,
-            backend_status,
-            expected_backend
-        )
-
-        if info.has_update then
-            msg = msg .. "\n" .. _("A newer version of the Sink plugin is available!")
-            if info.download_url then
-                UIManager:show(ConfirmBox:new{
-                    text = msg .. "\n\n" .. _("Download and install update now?"),
-                    ok_text = _("Update Plugin"),
-                    cancel_text = _("Cancel"),
-                    ok_callback = function()
-                        self:downloadAndInstall(info.download_url, info.remote_version)
-                    end,
-                })
-                return
-            end
-        else
-            msg = msg .. "\n" .. _("✓ Plugin is up to date.")
-        end
-
-        local ButtonDialog = require("ui/widget/buttondialog")
-        local TextBoxWidget = require("ui/widget/textboxwidget")
-        local Font = require("ui/font")
-        local Screen = require("device/screen")
-        local added_widgets = {
-            TextBoxWidget:new{
-                text = msg,
-                face = Font:getFace("infofont"),
-                alignment = "left",
-                width = math.floor(Screen:getWidth() * 0.75),
-            }
-        }
-
-        local buttons = {
-            {
-                {
-                    text = _("Update Backend Now"),
-                    callback = function()
-                        UIManager:close(update_dlg)
-                        self:triggerBackendUpgrade(sink_instance)
-                    end,
-                },
-                {
-                    text = _("Close"),
-                    id = "close",
-                    callback = function()
-                        UIManager:close(update_dlg)
-                    end,
-                },
-            },
-        }
-
-        local update_dlg = ButtonDialog:new{
-            title = _("Sink Updates & Version"),
-            title_align = "center",
-            use_info_style = false,
-            _added_widgets = added_widgets,
-            buttons = buttons,
-        }
-        UIManager:show(update_dlg)
     end)
 end
 
