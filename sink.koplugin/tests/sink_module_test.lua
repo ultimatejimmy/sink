@@ -206,6 +206,6 @@ test_ui.doc_props = {
 local title, authors, book_key = test_inst:_getBookMetadata()
 assert(title == "Career of Evil (Cormoran Strike)", "Should extract title")
 assert(authors == "Robert Galbraith", "Should extract authors")
-assert(book_key == "career of evil::robert galbraith", "Should compute normalized book_key correctly")
+assert(book_key == "career of evil::galbraith robert", "Should compute normalized book_key correctly")
 
 print("✓ Sink main.lua module tests PASSED!")

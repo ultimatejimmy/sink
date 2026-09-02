@@ -288,8 +288,12 @@ function Sink:_getBookMetadata()
 
     local clean_authors = ""
     if authors and authors ~= "" then
-        clean_authors = authors:lower():gsub("[^%w%s]", " ")
-        clean_authors = clean_authors:match("^%s*(.-)%s*$"):gsub("%s+", " ")
+        local words = {}
+        for word in authors:lower():gsub("[^%w%s]", " "):gmatch("%S+") do
+            table.insert(words, word)
+        end
+        table.sort(words)
+        clean_authors = table.concat(words, " ")
     end
 
     local book_key = clean_authors ~= "" and (clean_title .. "::" .. clean_authors) or clean_title
@@ -1214,15 +1218,15 @@ function Sink:showPairedDevicesDialog()
         local is_current = (id_str == self.settings.device_id)
 
         local label = string.format("%s (%s)%s", model, id_str, is_current and _(" [This Device]") or "")
-        local subtitle = string.format(_("Last active: %s"), last_sync)
 
         table.insert(menu_items, {
-            text = label .. "\n  " .. subtitle,
+            text = label,
+            mandatory = last_sync,
             keep_menu_open = true,
             callback = function(touch_menu_instance)
                 local ConfirmBox = require("ui/widget/confirmbox")
                 UIManager:show(ConfirmBox:new{
-                    text = string.format(_("Remove device '%s' (%s) from your server?"), model, id_str),
+                    text = string.format(_("Device: %s\nID: %s\nLast Active: %s\n\nRemove this device from your server?"), model, id_str, last_sync),
                     ok_text = _("Remove"),
                     cancel_text = _("Cancel"),
                     ok_callback = function()
@@ -1243,6 +1247,8 @@ function Sink:showPairedDevicesDialog()
     dev_menu = Menu:new{
         title = _("Paired Devices"),
         item_table = menu_items,
+        single_line = true,
+        with_dots = true,
         is_borderless = false,
         on_close_callback = function() end,
     }
@@ -1283,15 +1289,16 @@ function Sink:showCloudLibraryDialog()
         local dev_name = tostring(b.device or "Reader")
         local doc_hash = b.document_hash
 
-        local item_text
+        -- Clean typographic title with author and sync details
+        local main_label = raw_title
         if author ~= "" then
-            item_text = string.format("%s\n  %s\n  %.1f%%  •  %s  (%s)", raw_title, author, pct, date_str, dev_name)
-        else
-            item_text = string.format("%s\n  %.1f%%  •  %s  (%s)", raw_title, pct, date_str, dev_name)
+            main_label = raw_title .. " — " .. author
         end
+        local meta_line = string.format("%s  (%s)", date_str, dev_name)
 
         table.insert(menu_items, {
-            text = item_text,
+            text = main_label,
+            mandatory = string.format("%.1f%%", pct),
             keep_menu_open = true,
             callback = function(touch_menu_instance)
                 local ConfirmBox = require("ui/widget/confirmbox")
@@ -1320,6 +1327,8 @@ function Sink:showCloudLibraryDialog()
     lib_menu = Menu:new{
         title = _("Synced Books (Cloud Library)"),
         item_table = menu_items,
+        single_line = true,
+        with_dots = true,
         is_borderless = false,
         on_close_callback = function() end,
     }

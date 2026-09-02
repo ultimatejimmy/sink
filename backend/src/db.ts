@@ -371,18 +371,21 @@ export async function getBooksForUser(
   username: string
 ): Promise<ProgressRecord[]> {
   await ensureDatabase(db);
-  // Return each unique book once, selecting the latest sync state per book
-  const result = await db
-    .prepare(`
-      SELECT username, document_hash, percentage, progress, device, device_id, timestamp, title, authors, book_key
+  // Return exactly one row per book representing the most recent progress update
+  const query = `
+    SELECT p1.username, p1.document_hash, p1.percentage, p1.progress, p1.device, p1.device_id, p1.timestamp, p1.title, p1.authors, p1.book_key
+    FROM progress p1
+    INNER JOIN (
+      SELECT COALESCE(NULLIF(book_key, ''), document_hash) AS canonical_key, MAX(timestamp) AS max_ts
       FROM progress
       WHERE username = ?
-      GROUP BY COALESCE(NULLIF(book_key, ''), NULLIF(title, ''), document_hash)
-      HAVING timestamp = MAX(timestamp)
-      ORDER BY timestamp DESC
-    `)
-    .bind(username)
-    .all<ProgressRecord>();
+      GROUP BY canonical_key
+    ) p2 ON COALESCE(NULLIF(p1.book_key, ''), p1.document_hash) = p2.canonical_key AND p1.timestamp = p2.max_ts
+    WHERE p1.username = ?
+    GROUP BY COALESCE(NULLIF(p1.book_key, ''), p1.document_hash)
+    ORDER BY p1.timestamp DESC
+  `;
+  const result = await db.prepare(query).bind(username, username).all<ProgressRecord>();
   return result.results || [];
 }
 
