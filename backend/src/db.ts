@@ -371,8 +371,16 @@ export async function getBooksForUser(
   username: string
 ): Promise<ProgressRecord[]> {
   await ensureDatabase(db);
+  // Return each unique book once, selecting the latest sync state per book
   const result = await db
-    .prepare("SELECT username, document_hash, percentage, progress, device, device_id, timestamp, title, authors, book_key FROM progress WHERE username = ? ORDER BY timestamp DESC")
+    .prepare(`
+      SELECT username, document_hash, percentage, progress, device, device_id, timestamp, title, authors, book_key
+      FROM progress
+      WHERE username = ?
+      GROUP BY COALESCE(NULLIF(book_key, ''), NULLIF(title, ''), document_hash)
+      HAVING timestamp = MAX(timestamp)
+      ORDER BY timestamp DESC
+    `)
     .bind(username)
     .all<ProgressRecord>();
   return result.results || [];

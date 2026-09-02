@@ -1274,24 +1274,30 @@ function Sink:showCloudLibraryDialog()
             local h = tostring(b.document_hash or "book")
             raw_title = #h > 12 and (h:sub(1, 12) .. "...") or h
         end
-        local author = (b.authors and b.authors ~= "") and (" — " .. tostring(b.authors)) or ""
+        local author = (b.authors and b.authors ~= "") and tostring(b.authors) or ""
         local date_str = ""
         local ts = tonumber(b.timestamp)
         if ts and ts > 0 then
-            pcall(function() date_str = os.date("%Y-%m-%d", ts) end)
+            pcall(function() date_str = os.date("%Y-%m-%d %H:%M", ts) end)
         end
         local dev_name = tostring(b.device or "Reader")
         local doc_hash = b.document_hash
 
-        local item_text = string.format("%s%s\n  %.1f%% • %s (%s)", raw_title, author, pct, date_str, dev_name)
+        local item_text
+        if author ~= "" then
+            item_text = string.format("%s\n  %s\n  %.1f%%  •  %s  (%s)", raw_title, author, pct, date_str, dev_name)
+        else
+            item_text = string.format("%s\n  %.1f%%  •  %s  (%s)", raw_title, pct, date_str, dev_name)
+        end
 
         table.insert(menu_items, {
             text = item_text,
             keep_menu_open = true,
             callback = function(touch_menu_instance)
                 local ConfirmBox = require("ui/widget/confirmbox")
+                local detail_author = (author ~= "") and ("\nAuthor: " .. author) or ""
                 UIManager:show(ConfirmBox:new{
-                    text = string.format(_("Book: %s%s\nProgress: %.1f%%\nLast Device: %s\nLast Sync: %s\n\nRemove this book's progress from cloud server?"), raw_title, author, pct, dev_name, date_str),
+                    text = string.format(_("Book: %s%s\nProgress: %.1f%%\nLast Device: %s\nLast Sync: %s\n\nRemove this book's progress from cloud server?"), raw_title, detail_author, pct, dev_name, date_str),
                     ok_text = _("Remove from Cloud"),
                     cancel_text = _("Close"),
                     ok_callback = function()
