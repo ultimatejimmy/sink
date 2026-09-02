@@ -1203,8 +1203,14 @@ function Sink:showPairedDevicesDialog()
 
     local lines = {}
     for idx, dev in ipairs(devices) do
-        local last_sync = dev.last_sync_at and os.date("%Y-%m-%d %H:%M", dev.last_sync_at) or _("Unknown")
-        table.insert(lines, string.format("%d. %s (%s)\n   %s: %s", idx, dev.device_model or "Reader", dev.device_id or "", _("Last active"), last_sync))
+        local ts = tonumber(dev.last_sync_at)
+        local last_sync = _("Unknown")
+        if ts and ts > 0 then
+            pcall(function() last_sync = os.date("%Y-%m-%d %H:%M", ts) end)
+        end
+        local model = tostring(dev.device_model or "Reader")
+        local id_str = tostring(dev.device_id or "")
+        table.insert(lines, string.format("%d. %s (%s)\n   %s: %s", idx, model, id_str, _("Last active"), last_sync))
     end
 
     local ButtonDialog = require("ui/widget/buttondialog")
@@ -1242,10 +1248,19 @@ function Sink:showCloudLibraryDialog()
     local lines = {}
     for idx, b in ipairs(books) do
         local pct = (tonumber(b.percentage) or 0) * 100
-        local title = b.title or b.document_hash:sub(1, 12) .. "..."
-        local author = b.authors and (" — " .. b.authors) or ""
-        local date_str = b.timestamp and os.date("%Y-%m-%d", b.timestamp) or ""
-        table.insert(lines, string.format("%d. %s%s\n   %.1f%% • %s (%s)", idx, title, author, pct, date_str, b.device or "Reader"))
+        local raw_title = b.title
+        if not raw_title or raw_title == "" then
+            local h = tostring(b.document_hash or "book")
+            raw_title = #h > 12 and (h:sub(1, 12) .. "...") or h
+        end
+        local author = (b.authors and b.authors ~= "") and (" — " .. tostring(b.authors)) or ""
+        local date_str = ""
+        local ts = tonumber(b.timestamp)
+        if ts and ts > 0 then
+            pcall(function() date_str = os.date("%Y-%m-%d", ts) end)
+        end
+        local dev_name = tostring(b.device or "Reader")
+        table.insert(lines, string.format("%d. %s%s\n   %.1f%% • %s (%s)", idx, raw_title, author, pct, date_str, dev_name))
     end
 
     local ButtonDialog = require("ui/widget/buttondialog")
