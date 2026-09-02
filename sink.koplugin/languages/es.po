@@ -1,0 +1,391 @@
+msgid ""
+msgstr ""
+"Language-Team: ES\n"
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# en-hash: 2437b0fa6dccf7b18b5066dfb92b718c
+msgid "%s (Up to date)"
+msgstr ""
+
+# en-hash: 8556ec0e104475c7fda95d46957db482
+msgid "%s (Update recommended: %s)"
+msgstr ""
+
+# en-hash: b348f6f9dd77c4915df1397ac19f16fd
+msgid "1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"
+msgstr ""
+
+# en-hash: b026e4e9adba9fa29a801dc9b7f37e28
+msgid "A newer version of the Sink plugin is available!"
+msgstr ""
+
+# en-hash: 78ec818fd3133b44e626ade17c2b7b39
+msgid "Account: Not Paired (Tap to pair)"
+msgstr ""
+
+# en-hash: 2aeaf3d30240f06ac46599d403210638
+msgid "Account: Paired (%s)"
+msgstr ""
+
+# en-hash: 72d64b2fd907a3bc9c165401861f3ac2
+msgid "Already synchronized with cloud."
+msgstr ""
+
+# en-hash: 95ce3c7e75bfb28e7df96004f552fc67
+msgid "Authentication failed (401 Unauthorized).\nTap 'Pair Device' to re-link your e-reader."
+msgstr ""
+
+# en-hash: a824b37efb0b99cc3b89aed704cd9343
+msgid "Auto-Sync on Read/Close/Sleep"
+msgstr ""
+
+# en-hash: fb31d5d60dfc91743223af2091ad4e75
+msgid "Backend update trigger failed:\n"
+msgstr ""
+
+# en-hash: 9a31c3d2c13f5e74e31bebdb66756dd3
+msgid "Binary (Exact File)"
+msgstr ""
+
+# en-hash: 281ebb531a6f713609d1b0d4d9e9d28e
+msgid "Binary (Strict byte-for-byte checksum)"
+msgstr ""
+
+# en-hash: ea4788705e6873b424c65e91c2846b19
+msgid "Cancel"
+msgstr ""
+
+# en-hash: 9211d73deff48a5bd41a1deddf351de1
+msgid "Cannot write temporary update file: "
+msgstr ""
+
+# en-hash: f77f38f684c8b974dd4a56bb321cfd5f
+msgid "Check for Updates"
+msgstr ""
+
+# en-hash: a5837d9f8fb60e352c9d4d2e023c67cb
+msgid "Checking connection to Sink server..."
+msgstr ""
+
+# en-hash: a07813cc05571f23ce8dd7039583d7da
+msgid "Checking for updates..."
+msgstr ""
+
+# en-hash: d3d2e617335f08df83599665eef8a418
+msgid "Close"
+msgstr ""
+
+# en-hash: a3003e4570e04ad38a5cb7364bffda8c
+msgid "Connecting to Sink server..."
+msgstr ""
+
+# en-hash: 26b00ebe59c92a2c4ec8f885979b8bd0
+msgid "Connection failed:\n"
+msgstr ""
+
+# en-hash: a1e1068ca58a26cb56794cd789c633ee
+msgid "Could not fetch paired devices:\n"
+msgstr ""
+
+# en-hash: 375bf3cbc2cc49fd6a6f2c99407f8c7b
+msgid "Could not fetch synced books:\n"
+msgstr ""
+
+# en-hash: 356e6b5e9763709fa0d96022eefc8957
+msgid "Could not reach GitHub Releases (HTTP %s)."
+msgstr ""
+
+# en-hash: 8e9483265efe4f1a2c6a6148a7204146
+msgid "Could not reach Sink server (%s).\nPlease verify Server URL and Wi-Fi connection."
+msgstr ""
+
+# en-hash: fd139b1d532801c3c7955ce10b583a03
+msgid "Could not trigger automated rebuild:\n\n"
+msgstr ""
+
+# en-hash: 4f2aa83292db267a941a12cad38fe5fb
+msgid "Device unlinked."
+msgstr ""
+
+# en-hash: c8a59e7135a20b362f9c768b09454fdb
+msgid "Dismiss"
+msgstr ""
+
+# en-hash: 470e46b1dd0d90377baa2ecc02d8f252
+msgid "Download and install update now?"
+msgstr ""
+
+# en-hash: 51db91eccc8c0b998db2ae4b77f95539
+msgid "Download failed (HTTP %s)."
+msgstr ""
+
+# en-hash: dcc5e21b55b3dfc190371df5fb101a40
+msgid "Downloading Sink %s..."
+msgstr ""
+
+# en-hash: b1fbdb8df0a6b86edbc767dbd7f469f8
+msgid "Extraction failed. Please unzip manually."
+msgstr ""
+
+# en-hash: c17c8fd463a63f8e02dcdbc6b3c6f843
+msgid "Failed to fetch remote progress:\n"
+msgstr ""
+
+# en-hash: 1ef71f9fd8a94456101fa7b16511ffa9
+msgid "Failed to upload progress:\n"
+msgstr ""
+
+# en-hash: aa0bb77ddcb7eeb8f32a2fe519e4d387
+msgid "Fetching cloud library..."
+msgstr ""
+
+# en-hash: 8cf083f26f18e45c3398e926099b425b
+msgid "Fetching paired devices..."
+msgstr ""
+
+# en-hash: febab61b61b85b4452d4a2fca9039b9f
+msgid "Filename (Cross-Device)"
+msgstr ""
+
+# en-hash: fef6cb00dd51df3bb24bcc057a68ec09
+msgid "Filename (Recommended for Phone/Calibre)"
+msgstr ""
+
+# en-hash: cea2dad169a812c5b684212b1015aec0
+msgid "Invalid release response from GitHub."
+msgstr ""
+
+# en-hash: d6c94dafc86cf9c510af903aa17e7e6b
+msgid "Invalid response from Sink server."
+msgstr ""
+
+# en-hash: 9a9d409e75e2d83920e499d64f01b16e
+msgid "Last active"
+msgstr ""
+
+# en-hash: 61057a0c84605444201929bdd72014f0
+msgid "Later"
+msgstr ""
+
+# en-hash: be4631863e9651e0539c340037c3adbe
+msgid "Local position is current (%.1f%%)."
+msgstr ""
+
+# en-hash: f9dd4d782c24ff3e78a5f38a91334072
+msgid "Matching Method: %s"
+msgstr ""
+
+# en-hash: 6a3a73ff5726b35900cfa03203b02bb8
+msgid "No active document found to sync."
+msgstr ""
+
+# en-hash: 19987feeae182bba4043ab22e0fcb535
+msgid "No books currently synced in cloud."
+msgstr ""
+
+# en-hash: d96596335fe4a87491b8981dfd2008ec
+msgid "No paired devices found on server."
+msgstr ""
+
+# en-hash: bbcc2c38226e739d9cd2bfe60b3fe3c2
+msgid "No remote progress found for this book."
+msgstr ""
+
+# en-hash: 063e11c34bdbb5356d769df1837c1f7f
+msgid "Non-intrusive private KOReader progress synchronization for Kindle and other devices with Cloudflare Workers."
+msgstr ""
+
+# en-hash: 883ac3fd8cb6dd3173e7bb6bff16088c
+msgid "Not checked yet"
+msgstr ""
+
+# en-hash: b503a77326440450833aaa989f9df59c
+msgid "Or open: %s\nand enter code: [ %s ]\n\n(Waiting for confirmation...)"
+msgstr ""
+
+# en-hash: ab859204d8c6aae023de1755d741745d
+msgid "Pair Device (Phone/PC)"
+msgstr ""
+
+# en-hash: 156b61f8952206c5bb7e44885e16c705
+msgid "Pair Device (Sink)"
+msgstr ""
+
+# en-hash: d6518f51e2eaa7da85bb81a7ddd8c5aa
+msgid "Paired Devices"
+msgstr ""
+
+# en-hash: a27f8ea860faa1bb4c887ed02e7d606d
+msgid "Pairing module not available."
+msgstr ""
+
+# en-hash: ec80f9911a895ce496b41173b83a28f6
+msgid "Pairing session timed out. Please try again."
+msgstr ""
+
+# en-hash: 7b703a688afcc131a40c9d1a84fb274a
+msgid "Please configure your Server URL in settings first."
+msgstr ""
+
+# en-hash: 3ca15b8c7a1e79594a930d7918d2c4de
+msgid "Please enter a valid Cloudflare Worker URL before pairing."
+msgstr ""
+
+# en-hash: efa47636b3d4c5ba89976b82ee5db803
+msgid "Please pair your device or configure credentials in settings."
+msgstr ""
+
+# en-hash: c0ca74919f4ca085ad90384d715730e8
+msgid "Please restart KOReader from the top menu."
+msgstr ""
+
+# en-hash: c1e26adc0e22db5365e68aac85fb7245
+msgid "Re-Pair Device (Phone/PC)"
+msgstr ""
+
+# en-hash: 51cfbcff36da74a9fc47f3a5140f99f2
+msgid "Restart"
+msgstr ""
+
+# en-hash: 099f68f1c01f941007b08bf7a08383ab
+msgid "Scan to deploy free Worker:\n%s"
+msgstr ""
+
+# en-hash: 4dbb7af7a2ed267f97c4bb02cc680a22
+msgid "Scan with your phone to pair instantly:"
+msgstr ""
+
+# en-hash: 030e80c4257b877a8a552065d42b21c3
+msgid "Server URL"
+msgstr ""
+
+# en-hash: eaa09e2cd23f9d6c80cacda8037b090a
+msgid "Server URL Required"
+msgstr ""
+
+# en-hash: 2b4bc547e505c8c5e7316cbd9c3ce903
+msgid "Server returned HTTP %d:\n%s"
+msgstr ""
+
+# en-hash: 77afe6fd6d53082d89a00cedd10dfb3d
+msgid "Server: %s"
+msgstr ""
+
+# en-hash: 2555393157815eda5f15be1fc5627ed7
+msgid "Set Server URL"
+msgstr ""
+
+# en-hash: 1eb558b5d865ebabb06575f5f0042599
+msgid "Sink"
+msgstr ""
+
+# en-hash: 0d454f0589b3a613bea5c9db66f04e6e
+msgid "Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nLatest Backend: %s\n"
+msgstr ""
+
+# en-hash: f64bd501a0c430a13f16c382e2801183
+msgid "Sink Updates & Version"
+msgstr ""
+
+# en-hash: e7ba66608877eaec18db26dd739b4013
+msgid "Sink: Pair Device"
+msgstr ""
+
+# en-hash: 2878788c63590675abf7d2bc0ee0097c
+msgid "Sink: Sync Now"
+msgstr ""
+
+# en-hash: e6779d462a374ba68c5d19fdbe9b642f
+msgid "Sync Progress Now"
+msgstr ""
+
+# en-hash: c501e1f9495ff8eab7c7798b1e38bea4
+msgid "Sync X-Ray Cache"
+msgstr ""
+
+# en-hash: 9a0d5b8b784e6e32035c24675acbd595
+msgid "Synced Books (Cloud Library)"
+msgstr ""
+
+# en-hash: 0f111cf75296ea35df2ace16e8a18241
+msgid "Synced from cloud: %.1f%% (%s)"
+msgstr ""
+
+# en-hash: e8a6d99eb898c3f48b663da56fc11cde
+msgid "Synced to cloud: %.1f%%"
+msgstr ""
+
+# en-hash: c92e6c4ff7075865e80918469a6d887a
+msgid "Syncing with Sink server..."
+msgstr ""
+
+# en-hash: eabe81c1919fc176da8928966a8eabb8
+msgid "Triggering Cloudflare backend update..."
+msgstr ""
+
+# en-hash: 88183b946cc5f0e8c96b2e66e1c74a7e
+msgid "Unknown"
+msgstr ""
+
+# en-hash: 5ff395ed919579fb258f6e94d0ef912a
+msgid "Unlink Device/Clear Account"
+msgstr ""
+
+# en-hash: ad7ec437ea8ccc0b43b97afa699d0b00
+msgid "Update Backend Now"
+msgstr ""
+
+# en-hash: c498c80a98cf895782f38e7175bc9701
+msgid "Update Plugin"
+msgstr ""
+
+# en-hash: 445d73ec0479f5ff9c89eeff9c3de0c9
+msgid "Update check failed:\n"
+msgstr ""
+
+# en-hash: 8a3668b0f7baa857a2b2be28d61eee19
+msgid "Updater module not available."
+msgstr ""
+
+# en-hash: 924c55ab0c9aeb110a5e15752643da06
+msgid "Welcome & Setup Guide"
+msgstr ""
+
+# en-hash: ecc1598a145a24203d9bcbd8be700d30
+msgid "Welcome to Sink"
+msgstr ""
+
+# en-hash: b5df1ec8b1e17a95cac17a9cd0acec5c
+msgid "Welcome to Sink!\n\nSink gives you private, seamless reading progress and X-Ray synchronization across all your KOReader devices.\n\nSetup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."
+msgstr ""
+
+# en-hash: 3ddbd341065edde5b6532c76d92fc9bf
+msgid "Your GitHub fork also auto-syncs daily via GitHub Actions."
+msgstr ""
+
+# en-hash: 9cfefed8fb9497baa5cd519d7d2bb5d7
+msgid "current_language"
+msgstr ""
+
+# en-hash: 27310f957a7c4da22537887e568d400b
+msgid "✓ Backend update triggered!\n\nCloudflare is rebuilding your Worker in the background (~30-45 seconds)."
+msgstr ""
+
+# en-hash: 687201e624f865892669b1937b36d84f
+msgid "✓ Connected & Synced!\nAccount: "
+msgstr ""
+
+# en-hash: 7948ec8a56cec3c46023793087050782
+msgid "✓ E-Reader Paired Successfully!\n\nConnected as: %s\nReading progress will now sync automatically."
+msgstr ""
+
+# en-hash: 002ef1e9ffc6632f8f852326ff6d7965
+msgid "✓ Plugin is up to date."
+msgstr ""
+
+# en-hash: 74e57e6b3051c93215e676599c169e09
+msgid "✓ Sink %s installed successfully!\n\nRestart KOReader now to apply the update?"
+msgstr ""
+

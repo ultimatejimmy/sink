@@ -1,0 +1,26 @@
+﻿name: Sync Upstream & Redeploy Backend
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Run automatically every day at 04:00 UTC
+  workflow_dispatch: # Enable manual trigger in GitHub Actions UI
+
+jobs:
+  sync:
+    name: Sync with Upstream Sink
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Sync and Merge Upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/ultimatejimmy/sink.git || true
+          git fetch upstream main
+          git merge upstream/main -m "chore: sync upstream changes from ultimatejimmy/sink" --allow-unrelated-histories || git merge --abort
+          git push origin main

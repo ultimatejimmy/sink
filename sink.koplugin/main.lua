@@ -13,6 +13,16 @@ local http = require("socket.http")
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local _ = require("gettext")
+local Loc = nil
+pcall(function()
+    Loc = require(plugin_path .. "localization_sink")
+    if Loc and Loc.init then
+        Loc:init()
+        _ = function(text, ...)
+            return Loc:t(text, ...)
+        end
+    end
+end)
 
 local Event = nil
 pcall(function() Event = require("ui/event") end)
@@ -23,6 +33,11 @@ local plugin_path = ((...) or ""):match("(.-)[^%.]+$") or ""
 local SinkPairing = nil
 pcall(function()
     SinkPairing = require(plugin_path .. "sink_pairing")
+end)
+local SinkUpdater = nil
+pcall(function()
+    SinkUpdater = require(plugin_path .. "sink_updater")
+    if SinkUpdater and Loc then SinkUpdater.loc = Loc end
 end)
 
 local DataStorage = nil
@@ -43,6 +58,8 @@ local DEFAULT_SETTINGS = {
     username = "",
     userkey = "",
     auto_sync = true,
+    sync_xray = true,
+    welcome_shown = false,
     checksum_method = "filename",
     last_sync_time = 0,
     last_sync_doc = "",
@@ -52,6 +69,20 @@ function Sink:init()
     self.ui.menu:registerToMainMenu(self)
     self:loadSettings()
     self.last_page_turn_time = 0
+    self.backend_version = "Unknown"
+
+    if not self.settings.welcome_shown and self:isDefaultServerUrl() then
+        if UIManager and UIManager.nextTick then
+            UIManager:nextTick(function()
+                self:showWelcomeDialog()
+            end)
+        end
+    end
+end
+
+function Sink:isDefaultServerUrl()
+    local url = self.settings.server_url or ""
+    return url == "" or url == DEFAULT_SETTINGS.server_url or url:find("your%-subdomain") ~= nil
 end
 
 function Sink:getSettingsPath()
@@ -158,6 +189,10 @@ function Sink:_makeRequest(method, endpoint, body_table)
     local decoded = nil
     if raw_res and #raw_res > 0 then
         pcall(function() decoded = json.decode(raw_res) end)
+    end
+
+    if resp_headers and (resp_headers["x-sink-backend-version"] or resp_headers["X-Sink-Backend-Version"]) then
+        self.backend_version = resp_headers["x-sink-backend-version"] or resp_headers["X-Sink-Backend-Version"]
     end
 
     return {
@@ -509,6 +544,10 @@ function Sink:_pullDocument(is_manual)
         self.settings.last_sync_doc = doc_md5
         self:saveSettings()
 
+        if self.settings.sync_xray then
+            self:_pullXrayCache(doc_md5, book_key)
+        end
+
         if is_manual then
             UIManager:show(Notification:new{
                 text = string.format(_("Synced from cloud: %.1f%% (%s)"), remote_pct * 100, remote.device or "Remote"),
@@ -517,12 +556,95 @@ function Sink:_pullDocument(is_manual)
         return true
     else
         logger.info(string.format("Sink: local progress is current (local: %.1f%%, remote: %.1f%%). Skipping pull.", (local_pct or 0) * 100, remote_pct * 100))
+        if self.settings.sync_xray then
+            self:_pullXrayCache(doc_md5, book_key)
+        end
         if is_manual then
             UIManager:show(Notification:new{
                 text = string.format(_("Local position is current (%.1f%%)."), (local_pct or 0) * 100),
             })
         end
         return true
+    end
+end
+
+function Sink:_getXrayCachePath(file_path)
+    file_path = file_path or (self.ui and self.ui.document and self.ui.document.file)
+    if not file_path then return nil end
+    local ok_ds, DocSettings = pcall(require, "docsettings")
+    if ok_ds and DocSettings and DocSettings.getSidecarDir then
+        local sidecar = DocSettings:getSidecarDir(file_path)
+        if sidecar then return sidecar .. "/xray_cache.lua" end
+    end
+    local base = file_path:match("^(.-)%.[^%.]+$") or file_path
+    return base .. ".sdr/xray_cache.lua"
+end
+
+function Sink:_pushXrayCache(doc_md5, book_key)
+    if not self.settings.sync_xray then return end
+    local cache_file = self:_getXrayCachePath()
+    if not cache_file then return end
+
+    local f = io.open(cache_file, "r")
+    if not f then return end
+    local content = f:read("*a")
+    f:close()
+
+    if not content or #content == 0 then return end
+    local lfs_ok, lfs = pcall(require, "libs/libkoreader-lfs")
+    if not lfs_ok or type(lfs) ~= "table" then pcall(function() lfs = require("lfs") end) end
+    local mtime = os.time()
+    if lfs and lfs.attributes then
+        local attr = lfs.attributes(cache_file)
+        if attr and attr.modification then mtime = attr.modification end
+    end
+
+    logger.info("Sink: pushing X-Ray cache to cloud for book: " .. tostring(book_key or doc_md5))
+    self:_makeRequest("PUT", "/syncs/xray", {
+        document = doc_md5,
+        book_key = book_key,
+        cache_data = content,
+        timestamp = mtime,
+    })
+end
+
+function Sink:_pullXrayCache(doc_md5, book_key)
+    if not self.settings.sync_xray then return end
+    local cache_file = self:_getXrayCachePath()
+    if not cache_file then return end
+
+    local endpoint = "/syncs/xray/" .. doc_md5
+    if book_key and book_key ~= "" then
+        endpoint = endpoint .. "?book_key=" .. self:_urlEncode(book_key)
+    end
+
+    local res, err = self:_makeRequest("GET", endpoint)
+    if err or not res or res.status ~= 200 or not res.body or not res.body.cache_data then
+        return
+    end
+
+    local remote_ts = tonumber(res.body.timestamp) or 0
+    local lfs_ok, lfs = pcall(require, "libs/libkoreader-lfs")
+    if not lfs_ok or type(lfs) ~= "table" then pcall(function() lfs = require("lfs") end) end
+    local local_ts = 0
+    if lfs and lfs.attributes then
+        local attr = lfs.attributes(cache_file)
+        if attr and attr.modification then local_ts = attr.modification end
+    end
+
+    -- Only overwrite if remote is newer or local does not exist
+    if remote_ts > local_ts or local_ts == 0 then
+        -- Ensure directory exists
+        local dir = cache_file:match("(.+)/[^/]+$")
+        if dir and lfs and lfs.mkdir then
+            pcall(function() lfs.mkdir(dir) end)
+        end
+        local f = io.open(cache_file, "w")
+        if f then
+            f:write(res.body.cache_data)
+            f:close()
+            logger.info("Sink: updated local X-Ray cache from cloud for " .. tostring(book_key or doc_md5))
+        end
     end
 end
 
@@ -591,6 +713,10 @@ function Sink:_pushDocument(is_manual)
     self.settings.last_sync_doc = doc_md5
     self:saveSettings()
 
+    if self.settings.sync_xray then
+        self:_pushXrayCache(doc_md5, book_key)
+    end
+
     if is_manual then
         UIManager:show(Notification:new{
             text = string.format(_("Synced to cloud: %.1f%%"), (local_pct or 0) * 100),
@@ -656,13 +782,15 @@ function Sink:_syncDocument(is_manual_or_mode, is_manual_arg)
         end
 
         if remote_prog == local_prog then
+            if self.settings.sync_xray then
+                self:_pullXrayCache(doc_md5, book_key)
+            end
             if is_manual then
                 UIManager:show(Notification:new{ text = _("Already synchronized with cloud.") })
             end
             return true
         end
 
-        -- If remote is further ahead by >0.1%:
         if remote_pct > (local_pct + 0.001) then
             return self:_pullDocument(is_manual)
         elseif (self.last_page_turn_time or 0) == 0 and remote_ts > 0 then
@@ -726,6 +854,16 @@ function Sink:onSuspend()
     self:_silentBackgroundSync("onSuspend", "push")
 end
 
+function Sink:onResume()
+    if UIManager and UIManager.nextTick then
+        UIManager:nextTick(function()
+            self:_silentBackgroundSync("onResume", "pull")
+        end)
+    else
+        self:_silentBackgroundSync("onResume", "pull")
+    end
+end
+
 function Sink:onNetworkConnected()
     self:_silentBackgroundSync("onNetworkConnected", "full")
 end
@@ -759,10 +897,50 @@ function Sink:onSinkSyncNow()
 end
 
 function Sink:onSinkPair()
+    self:checkServerUrlAndPair()
+end
+
+function Sink:checkServerUrlAndPair(touch_menu_instance)
+    if self:isDefaultServerUrl() then
+        self:showInputDialog(
+            _("Server URL Required"),
+            self.settings.server_url,
+            function(val)
+                local clean = cleanUrl(val)
+                if clean ~= "" and clean ~= DEFAULT_SETTINGS.server_url and clean:find("your%-subdomain") == nil then
+                    self.settings.server_url = clean
+                    self.settings.welcome_shown = true
+                    self:saveSettings()
+                    if touch_menu_instance and touch_menu_instance.updateItems then
+                        pcall(function() touch_menu_instance:updateItems() end)
+                    end
+                    if SinkPairing then
+                        SinkPairing:startPairing(self, function()
+                            self:_syncDocument(false)
+                            if touch_menu_instance and touch_menu_instance.updateItems then
+                                pcall(function() touch_menu_instance:updateItems() end)
+                            end
+                        end)
+                    end
+                else
+                    UIManager:show(InfoMessage:new{
+                        text = _("Please enter a valid Cloudflare Worker URL before pairing."),
+                    })
+                end
+            end
+        )
+        return
+    end
+
     if SinkPairing then
         SinkPairing:startPairing(self, function()
             self:_syncDocument(false)
+            if touch_menu_instance and touch_menu_instance.updateItems then
+                pcall(function() touch_menu_instance:updateItems() end)
+            end
         end)
+    else
+        UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })
     end
 end
 
@@ -822,7 +1000,7 @@ function Sink:getMenuTable()
 
         -- 2. Daily Reading Toggle: Auto-Sync
         {
-            text = _("Auto-Sync on Read / Close / Sleep"),
+            text = _("Auto-Sync on Read/Close/Sleep"),
             checked_func = function()
                 return self.settings.auto_sync
             end,
@@ -830,10 +1008,22 @@ function Sink:getMenuTable()
                 self.settings.auto_sync = not self.settings.auto_sync
                 self:saveSettings()
             end,
+        },
+
+        -- 3. X-Ray Cache Sync Toggle
+        {
+            text = _("Sync X-Ray Cache"),
+            checked_func = function()
+                return self.settings.sync_xray
+            end,
+            callback = function()
+                self.settings.sync_xray = not self.settings.sync_xray
+                self:saveSettings()
+            end,
             separator = true,
         },
 
-        -- 3. Live Account & Connection Status
+        -- 4. Live Account & Connection Status
         {
             text_func = function()
                 if self.settings.username and self.settings.username ~= "" then
@@ -849,43 +1039,52 @@ function Sink:getMenuTable()
                         self:testConnection()
                     end)
                 else
-                    if SinkPairing then
-                        SinkPairing:startPairing(self, function()
-                            self:_syncDocument(false)
-                            if touch_menu_instance and touch_menu_instance.updateItems then
-                                pcall(function() touch_menu_instance:updateItems() end)
-                            end
-                        end)
-                    end
+                    self:checkServerUrlAndPair(touch_menu_instance)
                 end
             end,
         },
 
-        -- 4. Device Setup / Pairing Action
+        -- 5. Device Setup / Pairing Action
         {
             text_func = function()
                 if self.settings.username and self.settings.username ~= "" then
-                    return _("Re-Pair Device (Phone / PC)")
+                    return _("Re-Pair Device (Phone/PC)")
                 else
-                    return _("Pair Device (Phone / PC)")
+                    return _("Pair Device (Phone/PC)")
                 end
             end,
             keep_menu_open = false,
             callback = function(touch_menu_instance)
-                if SinkPairing then
-                    SinkPairing:startPairing(self, function()
-                        self:_syncDocument(false)
-                        if touch_menu_instance and touch_menu_instance.updateItems then
-                            pcall(function() touch_menu_instance:updateItems() end)
-                        end
-                    end)
-                else
-                    UIManager:show(InfoMessage:new{ text = _("Pairing module not available.") })
-                end
+                self:checkServerUrlAndPair(touch_menu_instance)
             end,
         },
 
-        -- 5. Document Matching Method
+        -- 6. Paired Devices List
+        {
+            text = _("Paired Devices"),
+            enabled_func = function()
+                return self.settings.username ~= ""
+            end,
+            keep_menu_open = true,
+            callback = function()
+                self:showPairedDevicesDialog()
+            end,
+        },
+
+        -- 7. Synced Books (Cloud Library)
+        {
+            text = _("Synced Books (Cloud Library)"),
+            enabled_func = function()
+                return self.settings.username ~= ""
+            end,
+            keep_menu_open = true,
+            callback = function()
+                self:showCloudLibraryDialog()
+            end,
+            separator = true,
+        },
+
+        -- 8. Document Matching Method
         {
             text_func = function()
                 local method = self.settings.checksum_method or "filename"
@@ -894,7 +1093,7 @@ function Sink:getMenuTable()
             end,
             sub_item_table = {
                 {
-                    text = _("Filename (Recommended for Phone / Calibre)"),
+                    text = _("Filename (Recommended for Phone/Calibre)"),
                     checked_func = function()
                         return (self.settings.checksum_method or "filename") == "filename"
                     end,
@@ -922,7 +1121,7 @@ function Sink:getMenuTable()
             },
         },
 
-        -- 6. Server URL Configuration
+        -- 9. Server URL Configuration
         {
             text_func = function()
                 local url = self.settings.server_url or ""
@@ -944,9 +1143,31 @@ function Sink:getMenuTable()
             end,
         },
 
-        -- 6. Unlink / Reset Option
+        -- 10. Check for Updates (Plugin & Backend)
         {
-            text = _("Unlink Device / Clear Account"),
+            text = _("Check for Updates"),
+            keep_menu_open = true,
+            callback = function()
+                if SinkUpdater then
+                    SinkUpdater:showUpdateDialog(self)
+                else
+                    UIManager:show(InfoMessage:new{ text = _("Updater module not available.") })
+                end
+            end,
+        },
+
+        -- 11. Welcome & Setup Guide
+        {
+            text = _("Welcome & Setup Guide"),
+            keep_menu_open = true,
+            callback = function()
+                self:showWelcomeDialog()
+            end,
+        },
+
+        -- 12. Unlink / Reset Option
+        {
+            text = _("Unlink Device/Clear Account"),
             enabled_func = function()
                 return self.settings.username ~= ""
             end,
@@ -962,6 +1183,172 @@ function Sink:getMenuTable()
             end,
         },
     }
+end
+
+function Sink:showPairedDevicesDialog()
+    UIManager:show(Notification:new{ text = _("Fetching paired devices...") })
+    local res, err = self:_makeRequest("GET", "/syncs/devices")
+    if err or not res or res.status ~= 200 then
+        UIManager:show(InfoMessage:new{
+            text = _("Could not fetch paired devices:\n") .. tostring(err or (res and res.raw) or "Error"),
+        })
+        return
+    end
+
+    local devices = (res.body and res.body.devices) or {}
+    if #devices == 0 then
+        UIManager:show(InfoMessage:new{ text = _("No paired devices found on server.") })
+        return
+    end
+
+    local lines = {}
+    for idx, dev in ipairs(devices) do
+        local last_sync = dev.last_sync_at and os.date("%Y-%m-%d %H:%M", dev.last_sync_at) or _("Unknown")
+        table.insert(lines, string.format("%d. %s (%s)\n   %s: %s", idx, dev.device_model or "Reader", dev.device_id or "", _("Last active"), last_sync))
+    end
+
+    local ButtonDialog = require("ui/widget/buttondialog")
+    UIManager:show(ButtonDialog:new{
+        title = _("Paired Devices"),
+        use_info_style = true,
+        info_text = table.concat(lines, "\n\n"),
+        buttons = {
+            {
+                {
+                    text = _("Close"),
+                    callback = function() end,
+                },
+            },
+        },
+    })
+end
+
+function Sink:showCloudLibraryDialog()
+    UIManager:show(Notification:new{ text = _("Fetching cloud library...") })
+    local res, err = self:_makeRequest("GET", "/syncs/books")
+    if err or not res or res.status ~= 200 then
+        UIManager:show(InfoMessage:new{
+            text = _("Could not fetch synced books:\n") .. tostring(err or (res and res.raw) or "Error"),
+        })
+        return
+    end
+
+    local books = (res.body and res.body.books) or {}
+    if #books == 0 then
+        UIManager:show(InfoMessage:new{ text = _("No books currently synced in cloud.") })
+        return
+    end
+
+    local lines = {}
+    for idx, b in ipairs(books) do
+        local pct = (tonumber(b.percentage) or 0) * 100
+        local title = b.title or b.document_hash:sub(1, 12) .. "..."
+        local author = b.authors and (" — " .. b.authors) or ""
+        local date_str = b.timestamp and os.date("%Y-%m-%d", b.timestamp) or ""
+        table.insert(lines, string.format("%d. %s%s\n   %.1f%% • %s (%s)", idx, title, author, pct, date_str, b.device or "Reader"))
+    end
+
+    local ButtonDialog = require("ui/widget/buttondialog")
+    UIManager:show(ButtonDialog:new{
+        title = _("Synced Books (Cloud Library)"),
+        use_info_style = true,
+        info_text = table.concat(lines, "\n\n"),
+        buttons = {
+            {
+                {
+                    text = _("Close"),
+                    callback = function() end,
+                },
+            },
+        },
+    })
+end
+
+function Sink:showWelcomeDialog()
+    local ButtonDialog = require("ui/widget/buttondialog")
+    local TextBoxWidget = require("ui/widget/textboxwidget")
+    local Font = require("ui/font")
+    local Size = require("ui/size")
+    local Screen = Device and Device.screen
+    local Blitbuffer = nil
+    pcall(function() Blitbuffer = require("ffi/blitbuffer") end)
+    local FrameContainer = nil
+    pcall(function() FrameContainer = require("ui/widget/container/framecontainer") end)
+    local QRWidget = nil
+    pcall(function() QRWidget = require("ui/widget/qrwidget") end)
+
+    local deploy_url = "https://github.com/ultimatejimmy/sink"
+    local added_widgets = {}
+
+    table.insert(added_widgets, TextBoxWidget:new{
+        text = _("Welcome to Sink!\n\nSink gives you private, seamless reading progress and X-Ray synchronization across all your KOReader devices.\n\nSetup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."),
+        face = Font:getFace("infofont"),
+        alignment = "left",
+    })
+
+    if QRWidget and FrameContainer and Blitbuffer then
+        pcall(function()
+            local qr_size = Screen and Screen.scaleBySize and Screen:scaleBySize(150) or 150
+            local qr = QRWidget:new{
+                text = deploy_url,
+                width = qr_size,
+                height = qr_size,
+            }
+            local pad = Size and Size.padding and Size.padding.default or 6
+            local qr_box = FrameContainer:new{
+                background = Blitbuffer.COLOR_WHITE,
+                padding = pad,
+                bordersize = 0,
+                qr,
+            }
+            local VerticalSpan = require("ui/widget/verticalspan")
+            table.insert(added_widgets, VerticalSpan:new{ width = 6 })
+            table.insert(added_widgets, qr_box)
+            table.insert(added_widgets, VerticalSpan:new{ width = 6 })
+            table.insert(added_widgets, TextBoxWidget:new{
+                text = string.format(_("Scan to deploy free Worker:\n%s"), deploy_url),
+                face = Font:getFace("infofont"),
+                alignment = "center",
+            })
+        end)
+    end
+
+    local welcome_dlg = nil
+    local buttons = {
+        {
+            {
+                text = _("Set Server URL"),
+                id = "set_url",
+                callback = function()
+                    if welcome_dlg then UIManager:close(welcome_dlg) end
+                    self.settings.welcome_shown = true
+                    self:saveSettings()
+                    self:showInputDialog(_("Server URL"), self.settings.server_url, function(val)
+                        self.settings.server_url = cleanUrl(val)
+                        self:saveSettings()
+                    end)
+                end,
+            },
+            {
+                text = _("Dismiss"),
+                id = "close",
+                callback = function()
+                    self.settings.welcome_shown = true
+                    self:saveSettings()
+                    if welcome_dlg then UIManager:close(welcome_dlg) end
+                end,
+            },
+        },
+    }
+
+    welcome_dlg = ButtonDialog:new{
+        title = _("Welcome to Sink"),
+        title_align = "center",
+        use_info_style = false,
+        _added_widgets = added_widgets,
+        buttons = buttons,
+    }
+    UIManager:show(welcome_dlg)
 end
 
 function Sink:showInputDialog(title, initial_value, on_confirm)

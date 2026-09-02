@@ -1,6 +1,24 @@
 export interface Env {
   DB: D1Database;
   ENABLE_USER_REGISTRATION?: string;
+  ADMIN_PIN?: string;
+  DEPLOY_HOOK_URL?: string;
+}
+
+export interface DeviceRecord {
+  username: string;
+  device_id: string;
+  device_model: string;
+  created_at: number;
+  last_sync_at: number;
+}
+
+export interface XrayCacheRecord {
+  username: string;
+  book_key: string;
+  document_hash: string;
+  cache_data: string;
+  timestamp: number;
 }
 
 export interface User {

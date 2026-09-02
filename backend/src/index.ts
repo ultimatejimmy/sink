@@ -32,6 +32,12 @@ app.route("/users", usersRouter);
 app.route("/syncs", syncsRouter);
 app.route("/api/session", sessionRouter);
 
+// Attach backend version header to all responses
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Sink-Backend-Version", "1.1.0");
+});
+
 // Root Route: Interactive Mobile Web Pairing Portal / JSON Info (for APIs)
 app.get("/", async (c) => {
   const acceptHeader = c.req.header("accept") || "";
@@ -45,7 +51,7 @@ app.get("/", async (c) => {
     return c.json({
       service: "Sink KOReader Sync Server",
       status: "running",
-      version: "1.0.0",
+      version: "1.1.0",
       docs: "https://github.com/ultimatejimmy/sink",
     });
   }
@@ -115,7 +121,7 @@ app.get("/", async (c) => {
 
     <div class="step-title">Enter Pairing Code</div>
     <p class="step-desc">
-      On your Kindle / KOReader device, tap <strong>Tools &rarr; Sink &rarr; Pair Device</strong> to see your 6-character code.
+      On your Kindle/KOReader device, tap <strong>Tools &rarr; Sink &rarr; Pair Device (Phone/PC)</strong> to see your 6-character code.
     </p>
 
     <form id="pairForm">

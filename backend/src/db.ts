@@ -1,4 +1,4 @@
-import { User, ProgressRecord } from "./types";
+import { User, ProgressRecord, DeviceRecord, XrayCacheRecord } from "./types";
 
 let isInitialized = false;
 
@@ -49,7 +49,35 @@ export async function ensureDatabase(db: D1Database): Promise<void> {
         )
       `),
       db.prepare(`
+        CREATE TABLE IF NOT EXISTS devices (
+          username TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          device_model TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          last_sync_at INTEGER NOT NULL,
+          PRIMARY KEY (username, device_id),
+          FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        )
+      `),
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS xray_cache (
+          username TEXT NOT NULL,
+          book_key TEXT NOT NULL,
+          document_hash TEXT NOT NULL,
+          cache_data TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          PRIMARY KEY (username, book_key),
+          FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        )
+      `),
+      db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_progress_username ON progress(username)
+      `),
+      db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_devices_username ON devices(username)
+      `),
+      db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_xray_hash ON xray_cache(username, document_hash)
       `),
     ]);
 
@@ -291,5 +319,116 @@ export async function upsertProgress(
     } catch {}
   }
 
+  return result.success;
+}
+
+export async function upsertDevice(
+  db: D1Database,
+  username: string,
+  deviceId: string,
+  deviceModel: string
+): Promise<boolean> {
+  await ensureDatabase(db);
+  const now = Math.floor(Date.now() / 1000);
+  const query = `
+    INSERT INTO devices (username, device_id, device_model, created_at, last_sync_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(username, device_id) DO UPDATE SET
+      device_model = excluded.device_model,
+      last_sync_at = excluded.last_sync_at
+  `;
+  const result = await db.prepare(query).bind(username, deviceId, deviceModel, now, now).run();
+  return result.success;
+}
+
+export async function getDevicesForUser(
+  db: D1Database,
+  username: string
+): Promise<DeviceRecord[]> {
+  await ensureDatabase(db);
+  const result = await db
+    .prepare("SELECT username, device_id, device_model, created_at, last_sync_at FROM devices WHERE username = ? ORDER BY last_sync_at DESC")
+    .bind(username)
+    .all<DeviceRecord>();
+  return result.results || [];
+}
+
+export async function removeDevice(
+  db: D1Database,
+  username: string,
+  deviceId: string
+): Promise<boolean> {
+  await ensureDatabase(db);
+  const result = await db
+    .prepare("DELETE FROM devices WHERE username = ? AND device_id = ?")
+    .bind(username, deviceId)
+    .run();
+  return result.success;
+}
+
+export async function getBooksForUser(
+  db: D1Database,
+  username: string
+): Promise<ProgressRecord[]> {
+  await ensureDatabase(db);
+  const result = await db
+    .prepare("SELECT username, document_hash, percentage, progress, device, device_id, timestamp, title, authors, book_key FROM progress WHERE username = ? ORDER BY timestamp DESC")
+    .bind(username)
+    .all<ProgressRecord>();
+  return result.results || [];
+}
+
+export async function deleteBookProgress(
+  db: D1Database,
+  username: string,
+  documentHash: string
+): Promise<boolean> {
+  await ensureDatabase(db);
+  const result = await db
+    .prepare("DELETE FROM progress WHERE username = ? AND document_hash = ?")
+    .bind(username, documentHash)
+    .run();
+  return result.success;
+}
+
+export async function getXrayCache(
+  db: D1Database,
+  username: string,
+  bookKey: string | null,
+  documentHash: string
+): Promise<XrayCacheRecord | null> {
+  await ensureDatabase(db);
+  if (bookKey) {
+    const byKey = await db
+      .prepare("SELECT username, book_key, document_hash, cache_data, timestamp FROM xray_cache WHERE username = ? AND book_key = ?")
+      .bind(username, bookKey)
+      .first<XrayCacheRecord>();
+    if (byKey) return byKey;
+  }
+  const byHash = await db
+    .prepare("SELECT username, book_key, document_hash, cache_data, timestamp FROM xray_cache WHERE username = ? AND document_hash = ?")
+    .bind(username, documentHash)
+    .first<XrayCacheRecord>();
+  return byHash || null;
+}
+
+export async function upsertXrayCache(
+  db: D1Database,
+  username: string,
+  bookKey: string,
+  documentHash: string,
+  cacheData: string,
+  timestamp: number
+): Promise<boolean> {
+  await ensureDatabase(db);
+  const query = `
+    INSERT INTO xray_cache (username, book_key, document_hash, cache_data, timestamp)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(username, book_key) DO UPDATE SET
+      document_hash = excluded.document_hash,
+      cache_data = excluded.cache_data,
+      timestamp = excluded.timestamp
+  `;
+  const result = await db.prepare(query).bind(username, bookKey, documentHash, cacheData, timestamp).run();
   return result.success;
 }
