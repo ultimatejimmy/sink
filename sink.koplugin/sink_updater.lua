@@ -142,6 +142,20 @@ function M:showUpdateDialog(sink_instance)
                     return
                 end
 
+                -- GitHub check done. Now try a live health check for backend version.
+                -- Safe to block here — the menu is already closed and the notification
+                -- is rendered. Use pcall so a slow/unreachable backend doesn't crash.
+                pcall(function()
+                    local health_res = sink_instance:_makeRequest("GET", "/health")
+                    if health_res and health_res.body and health_res.body.version then
+                        sink_instance.backend_version = health_res.body.version
+                    elseif health_res and health_res.headers then
+                        local v = health_res.headers["x-sink-backend-version"]
+                            or health_res.headers["X-Sink-Backend-Version"]
+                        if v then sink_instance.backend_version = v end
+                    end
+                end)
+
                 local backend_ver = sink_instance.backend_version or "Unknown"
                 local expected_backend = "1.1.0"
                 local backend_status = (backend_ver == "Unknown") and _("Not reachable")
