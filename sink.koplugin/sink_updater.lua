@@ -272,52 +272,101 @@ function M:downloadAndInstall(url, new_ver)
     local Notification = require("ui/widget/notification")
     UIManager:show(Notification:new{ text = string.format(_("Downloading Sink %s..."), new_ver) })
 
-    local tmp_zip = "/tmp/sink_update.zip"
-    local file, open_err = io.open(tmp_zip, "wb")
-    if not file then
-        UIManager:show(InfoMessage:new{ text = _("Cannot write temporary update file: ") .. tostring(open_err) })
-        return
-    end
+    UIManager:scheduleIn(0.2, function()
+        local ok, err = pcall(function()
+            local tmp_zip = "/tmp/sink_update.zip"
+            local current_url = url
+            local downloaded = false
 
-    local is_https = url:match("^https://") ~= nil
-    local request_fn = is_https and https.request or http.request
-    local ok, code = pcall(function()
-        return request_fn{
-            url = url,
-            method = "GET",
-            headers = { ["User-Agent"] = "KOReader-Sink-Updater/1.0" },
-            sink = ltn12.sink.file(file),
-        }
-    end)
-    file:close()
-
-    if not ok or code ~= 200 then
-        UIManager:show(InfoMessage:new{ text = _("Download failed (HTTP %s).", tostring(code or "Error")) })
-        return
-    end
-
-    -- Unzip using system unzip
-    local target_parent = _plugin_dir:match("(.+)/[^/]+$") or "plugins"
-    local cmd = string.format('unzip -o "%s" -d "%s"', tmp_zip, target_parent)
-    local ret = os.execute(cmd)
-
-    if ret == 0 or ret == true then
-        UIManager:show(ConfirmBox:new{
-            text = string.format(_("✓ Sink %s installed successfully!\n\nRestart KOReader now to apply the update?"), new_ver),
-            ok_text = _("Restart"),
-            cancel_text = _("Later"),
-            ok_callback = function()
-                local Device = require("device")
-                if Device and Device.restartKOReader then
-                    Device:restartKOReader()
-                else
-                    UIManager:show(InfoMessage:new{ text = _("Please restart KOReader from the top menu.") })
+            for _ = 1, 5 do
+                local file, open_err = io.open(tmp_zip, "wb")
+                if not file then
+                    error(_("Cannot write temporary update file: ") .. tostring(open_err))
                 end
-            end,
-        })
-    else
-        UIManager:show(InfoMessage:new{ text = _("Extraction failed. Please unzip manually.") })
-    end
+
+                local is_https = current_url:match("^https://") ~= nil
+                local request_fn = is_https and https.request or http.request
+
+                local ok_res, code, resp_headers, _ = request_fn{
+                    url = current_url,
+                    method = "GET",
+                    headers = {
+                        ["User-Agent"] = "KOReader-Sink-Updater/1.0",
+                    },
+                    sink = ltn12.sink.file(file),
+                    timeout = 30,
+                }
+
+                -- Safely close file if ltn12 didn't close it already
+                pcall(function() file:close() end)
+
+                local status_num = tonumber(code) or (type(ok_res) == "number" and ok_res) or 0
+
+                if status_num >= 301 and status_num <= 308 and resp_headers then
+                    os.remove(tmp_zip)
+                    local location = resp_headers.location or resp_headers.Location
+                    if not location then
+                        error(_("Redirect response missing Location header."))
+                    end
+                    current_url = location
+                elseif status_num == 200 then
+                    downloaded = true
+                    break
+                else
+                    os.remove(tmp_zip)
+                    error(string.format(_("Download failed (HTTP %s)."), tostring(status_num or "Error")))
+                end
+            end
+
+            if not downloaded then
+                error(_("Too many redirects while downloading update."))
+            end
+
+            -- Verify the zip file is non-empty and starts with PK header
+            local test_file = io.open(tmp_zip, "rb")
+            if not test_file then
+                error(_("Downloaded archive could not be opened."))
+            end
+            local magic = test_file:read(4)
+            test_file:close()
+            if magic ~= "PK\3\4" then
+                os.remove(tmp_zip)
+                error(_("Downloaded file is not a valid zip archive."))
+            end
+
+            -- Unzip using system unzip
+            local target_parent = _plugin_dir:match("(.+)/[^/]+$") or "plugins"
+            local cmd = string.format('unzip -o "%s" -d "%s"', tmp_zip, target_parent)
+            local ret = os.execute(cmd)
+            os.remove(tmp_zip)
+
+            if ret == 0 or ret == true then
+                UIManager:show(ConfirmBox:new{
+                    text = string.format(_("✓ Sink %s installed successfully!\n\nRestart KOReader now to apply the update?"), new_ver),
+                    ok_text = _("Restart"),
+                    cancel_text = _("Later"),
+                    ok_callback = function()
+                        if UIManager.restartKOReader then
+                            UIManager:restartKOReader()
+                        else
+                            local Device = require("device")
+                            if Device and Device.restartKOReader then
+                                Device:restartKOReader()
+                            else
+                                UIManager:show(InfoMessage:new{ text = _("Please restart KOReader from the top menu.") })
+                            end
+                        end
+                    end,
+                })
+            else
+                error(_("Extraction failed. Please unzip manually."))
+            end
+        end)
+
+        if not ok then
+            UIManager:show(InfoMessage:new{ text = tostring(err) })
+        end
+    end)
 end
 
 return M
