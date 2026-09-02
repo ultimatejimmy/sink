@@ -137,15 +137,6 @@ function M:showUpdateDialog(sink_instance)
             return
         end
 
-        -- Query live backend health to obtain current backend version
-        local health_res, _ = sink_instance:_makeRequest("GET", "/health")
-        if health_res and health_res.body and health_res.body.version then
-            sink_instance.backend_version = health_res.body.version
-        elseif health_res and health_res.headers then
-            local v = health_res.headers["x-sink-backend-version"] or health_res.headers["X-Sink-Backend-Version"]
-            if v then sink_instance.backend_version = v end
-        end
-
         local backend_ver = sink_instance.backend_version or "Unknown"
         local expected_backend = "1.1.0"
         local backend_status = (backend_ver == "Unknown") and _("Not reachable")
@@ -180,11 +171,13 @@ function M:showUpdateDialog(sink_instance)
         local ButtonDialog = require("ui/widget/buttondialog")
         local TextBoxWidget = require("ui/widget/textboxwidget")
         local Font = require("ui/font")
+        local Screen = require("device/screen")
         local added_widgets = {
             TextBoxWidget:new{
                 text = msg,
                 face = Font:getFace("infofont"),
                 alignment = "left",
+                width = math.floor(Screen:getWidth() * 0.75),
             }
         }
 
@@ -193,12 +186,16 @@ function M:showUpdateDialog(sink_instance)
                 {
                     text = _("Update Backend Now"),
                     callback = function()
+                        UIManager:close(update_dlg)
                         self:triggerBackendUpgrade(sink_instance)
                     end,
                 },
                 {
                     text = _("Close"),
-                    callback = function() end,
+                    id = "close",
+                    callback = function()
+                        UIManager:close(update_dlg)
+                    end,
                 },
             },
         }
