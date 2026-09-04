@@ -267,7 +267,7 @@ function SinkPairing:pollSession(server_url, session_id, sink_plugin, on_complet
             sink_plugin:saveSettings()
 
             UIManager:show(InfoMessage:new{
-                text = string.format(_("✓ E-Reader Paired Successfully!\n\nConnected as: %s\nReading progress will now sync automatically."), data.username),
+                text = _("✓ E-Reader Paired Successfully!\n\nReading progress will now sync automatically."),
                 timeout = 6,
             })
 

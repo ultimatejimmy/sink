@@ -1027,13 +1027,13 @@ function Sink:getMenuTable()
             separator = true,
         },
 
-        -- 4. Live Account & Connection Status
+        -- 4. Live Connection Status
         {
             text_func = function()
                 if self.settings.username and self.settings.username ~= "" then
-                    return string.format(_("Account: Paired (%s)"), self.settings.username)
+                    return _("Status: Connected (Tap to test)")
                 else
-                    return _("Account: Not Paired (Tap to pair)")
+                    return _("Status: Not Paired (Tap to pair)")
                 end
             end,
             keep_menu_open = true,
@@ -1171,7 +1171,7 @@ function Sink:getMenuTable()
 
         -- 12. Unlink / Reset Option
         {
-            text = _("Unlink Device/Clear Account"),
+            text = _("Unlink Device"),
             enabled_func = function()
                 return self.settings.username ~= ""
             end,
@@ -1455,7 +1455,7 @@ function Sink:testConnection()
 
     if res.status == 200 then
         UIManager:show(InfoMessage:new{
-            text = _("✓ Connected & Synced!\nAccount: ") .. tostring(self.settings.username),
+            text = _("✓ Connected to Sink server!\nSync is active and healthy."),
         })
     elseif res.status == 401 then
         UIManager:show(InfoMessage:new{
