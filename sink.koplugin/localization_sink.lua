@@ -1,4 +1,4 @@
-﻿-- Localization Manager for Sink Plugin
+-- Localization Manager for Sink Plugin
 local logger = require("logger")
 local ok, lfs = pcall(require, "libs/libkoreader-lfs")
 if not ok or type(lfs) ~= "table" then
@@ -74,12 +74,18 @@ end
 function Localization:init(path)
     self.path = path or (debug.getinfo(1, "S").source or ""):match("^@?(.+)/[^/]+$") or "plugins/sink.koplugin"
     self.path = self.path:gsub("\\", "/")
-    self:discoverLanguages()
+    self.translations_loaded = false
+    self.available_languages = nil
     self:loadLanguage()
-    self:loadTranslations()
+    -- If current language is English, no parsing is needed as English is the codebase source language
+    if self.current_language == "en" then
+        self.translations_loaded = true
+        self.translations = {}
+    end
 end
 
 function Localization:discoverLanguages()
+    if self.available_languages then return end
     local lang_dir = self.path .. "/languages"
     self.available_languages = {}
     if not lfs then return end
@@ -118,6 +124,9 @@ function Localization:loadLanguage()
 end
 
 function Localization:hasLanguage(lang)
+    if not self.available_languages then
+        self:discoverLanguages()
+    end
     for _, l in ipairs(self.available_languages) do
         if l == lang then return true end
     end
@@ -125,20 +134,28 @@ function Localization:hasLanguage(lang)
 end
 
 function Localization:loadTranslations()
+    if self.translations_loaded then return end
+    self.translations_loaded = true
+
+    if self.current_language == "en" then
+        self.translations = {}
+        return
+    end
+
     local po_file = self.path .. "/languages/" .. self.current_language .. ".po"
     local translations = self:parsePO(po_file)
     if translations then
         self.translations = translations
-    elseif self.current_language ~= "en" then
-        po_file = self.path .. "/languages/en.po"
-        self.translations = self:parsePO(po_file) or {}
     else
         self.translations = {}
     end
 end
 
 function Localization:t(key, ...)
-    local text = self.translations[key]
+    if not self.translations_loaded then
+        self:loadTranslations()
+    end
+    local text = self.translations and self.translations[key]
     if not text or text == "" then
         text = key
     end

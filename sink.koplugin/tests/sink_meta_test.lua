@@ -1,4 +1,7 @@
 -- Mock gettext if running in standalone test runner
+if not package.loaded["gettext"] then
+    package.loaded["gettext"] = function(s) return s end
+end
 if not _G._ then
     _G._ = function(s) return s end
 end
