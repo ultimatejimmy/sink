@@ -696,8 +696,11 @@ function Sink:_pushDocument(is_manual, is_suspend)
         alt_hashes = #alt_list > 0 and alt_list or nil,
     }
 
-    -- Strict timeout on suspend (2s) to prevent Kindle watchdog panics
-    local timeout = is_suspend and 2 or (is_manual and 8 or 3)
+    -- Strict timeout on Kindle (2s) to prevent powerd watchdog panics.
+    -- Relaxed timeout on Kobo/other devices (5s) for DNS + TLS handshakes.
+    local is_kindle = Device and Device.isKindle and Device:isKindle()
+    local suspend_timeout = is_kindle and 2 or 5
+    local timeout = is_suspend and suspend_timeout or (is_manual and 8 or 3)
     local push_res, push_err = self:_makeRequest("PUT", "/syncs/progress", push_payload, timeout)
 
     if push_err or not push_res or push_res.status ~= 200 then
