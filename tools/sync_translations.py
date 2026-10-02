@@ -97,7 +97,7 @@ def call_gemini(prompt):
     key = get_gemini_key()
     if not key: return None
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={key}"
     headers = {"Content-Type": "application/json"}
     data = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -126,7 +126,7 @@ def call_gemini(prompt):
                     retry_after = e.headers.get('Retry-After')
                     sleep_time = int(retry_after) if retry_after else 10 * (attempt + 1)
                 else:
-                    sleep_time = 5 * (attempt + 1)
+                    sleep_time = 20 * (attempt + 1)
                 print(f"  - HTTP {e.code}, waiting {sleep_time}s before retry {attempt + 1}/{max_retries - 1}...")
                 time.sleep(sleep_time)
             else:
@@ -144,7 +144,7 @@ def call_gemini(prompt):
             return None
     return None
 
-def translate_all_gemini(all_untranslated, lang_names, max_pairs=60):
+def translate_all_gemini(all_untranslated, lang_names, max_pairs=40):
     """
     Translates all untranslated keys across all languages in batches.
     all_untranslated: {lang_code: {key: en_val}}

@@ -5,387 +5,459 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+# en-hash: b75877fdde7f1d19ee40acd02890be1c
+msgid " [This Device]"
+msgstr " [Цей пристрій]"
+
 # en-hash: 2437b0fa6dccf7b18b5066dfb92b718c
 msgid "%s (Up to date)"
-msgstr ""
+msgstr "%s (Останню версію встановлено)"
 
 # en-hash: 8556ec0e104475c7fda95d46957db482
 msgid "%s (Update recommended: %s)"
-msgstr ""
+msgstr "%s (Рекомендовано оновлення: %s)"
 
 # en-hash: b348f6f9dd77c4915df1397ac19f16fd
 msgid "1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"
-msgstr ""
-
-# en-hash: b026e4e9adba9fa29a801dc9b7f37e28
-msgid "A newer version of the Sink plugin is available!"
-msgstr ""
-
-# en-hash: 78ec818fd3133b44e626ade17c2b7b39
-msgid "Account: Not Paired (Tap to pair)"
-msgstr ""
-
-# en-hash: 2aeaf3d30240f06ac46599d403210638
-msgid "Account: Paired (%s)"
-msgstr ""
+msgstr "1. На телефоні чи комп'ютері відкрийте:\n%s\n\n2. Введіть цей код створення пари:\n\n[ %s ]\n\n(Очікування підтвердження...)"
 
 # en-hash: 72d64b2fd907a3bc9c165401861f3ac2
 msgid "Already synchronized with cloud."
-msgstr ""
+msgstr "Вже синхронізовано з хмарою."
 
 # en-hash: 95ce3c7e75bfb28e7df96004f552fc67
 msgid "Authentication failed (401 Unauthorized).\nTap 'Pair Device' to re-link your e-reader."
-msgstr ""
+msgstr "Помилка автентифікації (401 Неавторизовано).\nТоркніться «Створити пару з пристроєм», щоб повторно прив'язати читалку."
+
+# en-hash: 37f8267a3e714899a3a93e556537b999
+msgid "Authentication failed (401 Unauthorized).\nYour e-reader's credentials do not match this server.\n\nTap 'Re-Pair Device' to reconnect."
+msgstr "Помилка автентифікації (401 Неавторизовано).\nОблікові дані вашого електронного читача не збігаються з цим сервером.\n\nТоркніться «Перез'єднати пристрій» для повторного підключення."
 
 # en-hash: a824b37efb0b99cc3b89aed704cd9343
 msgid "Auto-Sync on Read/Close/Sleep"
-msgstr ""
+msgstr "Автосинхронізація при читанні/закритті/сні"
+
+# en-hash: 187c1b3c23e937a7de71a0df352410a3
+msgid "Backend endpoint not found (404).\nPlease deploy the updated backend to your Cloudflare Worker."
+msgstr "Кінцеву точку бекенду не знайдено (404).\nБудь ласка, розгорніть оновлений бекенд у своєму Cloudflare Worker."
 
 # en-hash: fb31d5d60dfc91743223af2091ad4e75
 msgid "Backend update trigger failed:\n"
-msgstr ""
+msgstr "Не вдалося запустити оновлення бекенду:\n"
 
 # en-hash: 9a31c3d2c13f5e74e31bebdb66756dd3
 msgid "Binary (Exact File)"
-msgstr ""
+msgstr "Двійковий (Точний файл)"
 
 # en-hash: 281ebb531a6f713609d1b0d4d9e9d28e
 msgid "Binary (Strict byte-for-byte checksum)"
-msgstr ""
+msgstr "Двійковий (Сувора контрольна сума байт-у-байт)"
+
+# en-hash: 4631bf0f9eeb09137ade35a11f4f5cae
+msgid "Book removed from cloud library."
+msgstr "Книгу видалено з хмарної бібліотеки."
+
+# en-hash: c259958d353bf7e81ae4f2238bc83834
+msgid "Book: %s%s\nProgress: %.1f%%\nLast Device: %s\nLast Sync: %s\n\nRemove this book's progress from cloud server?"
+msgstr "Книга: %s%s\nПрогрес: %.1f%%\nОстанній пристрій: %s\nОстання синхронізація: %s\n\nВидалити прогрес цієї книги з хмарного сервера?"
 
 # en-hash: ea4788705e6873b424c65e91c2846b19
 msgid "Cancel"
-msgstr ""
+msgstr "Скасувати"
 
 # en-hash: 9211d73deff48a5bd41a1deddf351de1
 msgid "Cannot write temporary update file: "
-msgstr ""
+msgstr "Не вдалося записати тимчасовий файл оновлення: "
 
 # en-hash: f77f38f684c8b974dd4a56bb321cfd5f
 msgid "Check for Updates"
-msgstr ""
+msgstr "Перевірити наявність оновлень"
 
 # en-hash: a5837d9f8fb60e352c9d4d2e023c67cb
 msgid "Checking connection to Sink server..."
-msgstr ""
+msgstr "Перевірка з'єднання з сервером Sink..."
 
 # en-hash: a07813cc05571f23ce8dd7039583d7da
 msgid "Checking for updates..."
-msgstr ""
+msgstr "Перевірка оновлень..."
 
 # en-hash: d3d2e617335f08df83599665eef8a418
 msgid "Close"
-msgstr ""
+msgstr "Закрити"
 
 # en-hash: a3003e4570e04ad38a5cb7364bffda8c
 msgid "Connecting to Sink server..."
-msgstr ""
+msgstr "Підключення до сервера Sink..."
 
 # en-hash: 26b00ebe59c92a2c4ec8f885979b8bd0
 msgid "Connection failed:\n"
-msgstr ""
+msgstr "Помилка з'єднання:\n"
 
 # en-hash: a1e1068ca58a26cb56794cd789c633ee
 msgid "Could not fetch paired devices:\n"
-msgstr ""
+msgstr "Не вдалося отримати з'єднані пристрої:\n"
 
 # en-hash: 375bf3cbc2cc49fd6a6f2c99407f8c7b
 msgid "Could not fetch synced books:\n"
-msgstr ""
+msgstr "Не вдалося отримати синхронізовані книги:\n"
 
 # en-hash: 356e6b5e9763709fa0d96022eefc8957
 msgid "Could not reach GitHub Releases (HTTP %s)."
-msgstr ""
+msgstr "Не вдалося отримати доступ до релізів GitHub (HTTP %s)."
 
 # en-hash: 8e9483265efe4f1a2c6a6148a7204146
 msgid "Could not reach Sink server (%s).\nPlease verify Server URL and Wi-Fi connection."
-msgstr ""
+msgstr "Не вдалося зв'язатися з сервером Sink (%s).\nБудь ласка, перевірте URL сервера та з'єднання Wi-Fi."
 
 # en-hash: fd139b1d532801c3c7955ce10b583a03
 msgid "Could not trigger automated rebuild:\n\n"
-msgstr ""
+msgstr "Не вдалося запустити автоматичну перебудову:\n\n"
+
+# en-hash: 0f008b1295f596b3359c5797ed4a60f5
+msgid "Could not update PIN (%s).\nPlease check your connection or backend deployment."
+msgstr "Не вдалося оновити PIN-код (%s).\nБудь ласка, перевірте з'єднання або розгортання бекенду."
+
+# en-hash: 044d98d4da2d52af45b4a2ae21334b3c
+msgid "Device removed."
+msgstr "Пристрій видалено."
 
 # en-hash: 4f2aa83292db267a941a12cad38fe5fb
 msgid "Device unlinked."
-msgstr ""
+msgstr "Пристрій від'єднано."
+
+# en-hash: e95588b6ce6fafb613c31ccefc9c6451
+msgid "Device: %s\nID: %s\nLast Active: %s\n\nRemove this device from your server?"
+msgstr "Пристрій: %s\nID: %s\nВостаннє активний: %s\n\nВидалити цей пристрій з сервера?"
 
 # en-hash: c8a59e7135a20b362f9c768b09454fdb
 msgid "Dismiss"
-msgstr ""
-
-# en-hash: 470e46b1dd0d90377baa2ecc02d8f252
-msgid "Download and install update now?"
-msgstr ""
+msgstr "Відхилити"
 
 # en-hash: 51db91eccc8c0b998db2ae4b77f95539
 msgid "Download failed (HTTP %s)."
-msgstr ""
+msgstr "Помилка завантаження (HTTP %s)."
+
+# en-hash: ec25c4544865843d8088295a3ef23f9c
+msgid "Downloaded archive could not be opened."
+msgstr "Не вдалося відкрити завантажений архів."
+
+# en-hash: 77733bb6671c95b70fdcef698430a93d
+msgid "Downloaded file is not a valid zip archive."
+msgstr "Завантажений файл не є дійсним zip-архівом."
 
 # en-hash: dcc5e21b55b3dfc190371df5fb101a40
 msgid "Downloading Sink %s..."
-msgstr ""
+msgstr "Завантаження Sink %s..."
+
+# en-hash: 4a57a599e6c568bcfdac524a8c639876
+msgid "Enter a new 4-digit PIN for device pairing:"
+msgstr "Введіть новий 4-значний PIN-код для зв'язування пристрою:"
 
 # en-hash: b1fbdb8df0a6b86edbc767dbd7f469f8
 msgid "Extraction failed. Please unzip manually."
-msgstr ""
+msgstr "Помилка розпакування. Будь ласка, розпакуйте вручну."
+
+# en-hash: 5f059982586c5abed8954183a004b5d8
+msgid "Failed to delete book: "
+msgstr "Не вдалося видалити книгу: "
 
 # en-hash: c17c8fd463a63f8e02dcdbc6b3c6f843
 msgid "Failed to fetch remote progress:\n"
-msgstr ""
+msgstr "Не вдалося отримати віддалений прогрес:\n"
+
+# en-hash: 26f832c75cd7ecbf1041216a422bf971
+msgid "Failed to remove device: "
+msgstr "Не вдалося видалити пристрій: "
 
 # en-hash: 1ef71f9fd8a94456101fa7b16511ffa9
 msgid "Failed to upload progress:\n"
-msgstr ""
+msgstr "Не вдалося вивантажити прогрес:\n"
 
 # en-hash: aa0bb77ddcb7eeb8f32a2fe519e4d387
 msgid "Fetching cloud library..."
-msgstr ""
+msgstr "Отримання хмарної бібліотеки..."
 
 # en-hash: 8cf083f26f18e45c3398e926099b425b
 msgid "Fetching paired devices..."
-msgstr ""
+msgstr "Отримання з'єднаних пристроїв..."
 
 # en-hash: febab61b61b85b4452d4a2fca9039b9f
 msgid "Filename (Cross-Device)"
-msgstr ""
+msgstr "Ім'я файлу (Між пристроями)"
 
 # en-hash: fef6cb00dd51df3bb24bcc057a68ec09
 msgid "Filename (Recommended for Phone/Calibre)"
-msgstr ""
+msgstr "Ім'я файлу (Рекомендовано для телефону/Calibre)"
 
 # en-hash: cea2dad169a812c5b684212b1015aec0
 msgid "Invalid release response from GitHub."
-msgstr ""
+msgstr "Недійсна відповідь релізу від GitHub."
 
 # en-hash: d6c94dafc86cf9c510af903aa17e7e6b
 msgid "Invalid response from Sink server."
-msgstr ""
-
-# en-hash: 9a9d409e75e2d83920e499d64f01b16e
-msgid "Last active"
-msgstr ""
+msgstr "Недійсна відповідь від сервера Sink."
 
 # en-hash: 61057a0c84605444201929bdd72014f0
 msgid "Later"
-msgstr ""
+msgstr "Пізніше"
 
 # en-hash: be4631863e9651e0539c340037c3adbe
 msgid "Local position is current (%.1f%%)."
-msgstr ""
+msgstr "Локальна позиція актуальна (%.1f%%)."
 
 # en-hash: f9dd4d782c24ff3e78a5f38a91334072
 msgid "Matching Method: %s"
-msgstr ""
+msgstr "Метод зіставлення: %s"
 
 # en-hash: 6a3a73ff5726b35900cfa03203b02bb8
 msgid "No active document found to sync."
-msgstr ""
+msgstr "Не знайдено активного документа для синхронизації."
 
 # en-hash: 19987feeae182bba4043ab22e0fcb535
 msgid "No books currently synced in cloud."
-msgstr ""
+msgstr "Наразі в хмарі немає синхронізованих книг."
 
 # en-hash: d96596335fe4a87491b8981dfd2008ec
 msgid "No paired devices found on server."
-msgstr ""
+msgstr "На сервері не знайдено з'єднаних пристроїв."
 
 # en-hash: bbcc2c38226e739d9cd2bfe60b3fe3c2
 msgid "No remote progress found for this book."
-msgstr ""
+msgstr "Для цієї книги не знайдено віддаленого прогресу."
 
 # en-hash: 063e11c34bdbb5356d769df1837c1f7f
 msgid "Non-intrusive private KOReader progress synchronization for Kindle and other devices with Cloudflare Workers."
-msgstr ""
+msgstr "Ненав'язлива приватна синхронізація прогресу KOReader для Kindle та інших пристроїв за допомогою Cloudflare Workers."
 
-# en-hash: 883ac3fd8cb6dd3173e7bb6bff16088c
-msgid "Not checked yet"
-msgstr ""
+# en-hash: 94a4e04debf2900937f3bbe67a9a390e
+msgid "Not reachable"
+msgstr "Недоступно"
 
 # en-hash: b503a77326440450833aaa989f9df59c
 msgid "Or open: %s\nand enter code: [ %s ]\n\n(Waiting for confirmation...)"
-msgstr ""
+msgstr "Або відкрийте: %s\nта введіть код: [ %s ]\n\n(Очікування підтвердження...)"
+
+# en-hash: 66f0b3639cdbb6e63241fdbdf529dbef
+msgid "PIN must be at least 4 digits."
+msgstr "PIN-код повинен містити щонайменше 4 цифри."
 
 # en-hash: ab859204d8c6aae023de1755d741745d
 msgid "Pair Device (Phone/PC)"
-msgstr ""
+msgstr "З'єднати пристрій (Телефон/ПК)"
 
 # en-hash: 156b61f8952206c5bb7e44885e16c705
 msgid "Pair Device (Sink)"
-msgstr ""
+msgstr "Зв'язати пристрій (Sink)"
 
 # en-hash: d6518f51e2eaa7da85bb81a7ddd8c5aa
 msgid "Paired Devices"
-msgstr ""
+msgstr "З'єднані пристрої"
 
 # en-hash: a27f8ea860faa1bb4c887ed02e7d606d
 msgid "Pairing module not available."
-msgstr ""
+msgstr "Модуль з'єднання недоступний."
 
 # en-hash: ec80f9911a895ce496b41173b83a28f6
 msgid "Pairing session timed out. Please try again."
-msgstr ""
+msgstr "Час сеансу створення пари вийшов. Спробуйте ще раз."
 
 # en-hash: 7b703a688afcc131a40c9d1a84fb274a
 msgid "Please configure your Server URL in settings first."
-msgstr ""
+msgstr "Будь ласка, спочатку налаштуйте URL сервера в налаштуваннях."
 
 # en-hash: 3ca15b8c7a1e79594a930d7918d2c4de
 msgid "Please enter a valid Cloudflare Worker URL before pairing."
-msgstr ""
+msgstr "Будь ласка, введіть дійсну URL-адресу Cloudflare Worker перед з'єднанням."
 
 # en-hash: efa47636b3d4c5ba89976b82ee5db803
 msgid "Please pair your device or configure credentials in settings."
-msgstr ""
+msgstr "Будь ласка, створіть пару з пристроєм або налаштуйте облікові дані в налаштуваннях."
 
 # en-hash: c0ca74919f4ca085ad90384d715730e8
 msgid "Please restart KOReader from the top menu."
-msgstr ""
+msgstr "Будь ласка, перезапустіть KOReader з верхнього меню."
 
 # en-hash: c1e26adc0e22db5365e68aac85fb7245
 msgid "Re-Pair Device (Phone/PC)"
-msgstr ""
+msgstr "Перез'єднати пристрій (Телефон/ПК)"
+
+# en-hash: 3c5e851cd8f912b758b2871b1d6f51d3
+msgid "Redirect response missing Location header."
+msgstr "У відповіді перенаправлення відсутній заголовок Location."
+
+# en-hash: 1063e38cb53d94d386f21227fcd84717
+msgid "Remove"
+msgstr "Видалити"
+
+# en-hash: ff1b47095f38c15db4a2ca22e3b7a186
+msgid "Remove from Cloud"
+msgstr "Видалити з хмари"
+
+# en-hash: 0fb0f8906f93733b83a764d5b0278e5d
+msgid "Reset Pairing PIN"
+msgstr "Скинути PIN-код з'єднання"
 
 # en-hash: 51cfbcff36da74a9fc47f3a5140f99f2
 msgid "Restart"
-msgstr ""
+msgstr "Перезапустити"
 
 # en-hash: 099f68f1c01f941007b08bf7a08383ab
 msgid "Scan to deploy free Worker:\n%s"
-msgstr ""
+msgstr "Відскануйте, щоб розгорнути безкоштовний Worker:\n%s"
 
 # en-hash: 4dbb7af7a2ed267f97c4bb02cc680a22
 msgid "Scan with your phone to pair instantly:"
-msgstr ""
+msgstr "Відскануйте телефоном для миттєвого створення пари:"
 
 # en-hash: 030e80c4257b877a8a552065d42b21c3
 msgid "Server URL"
-msgstr ""
+msgstr "URL-адреса сервера"
 
 # en-hash: eaa09e2cd23f9d6c80cacda8037b090a
 msgid "Server URL Required"
-msgstr ""
+msgstr "Потрібна URL-адреса сервера"
 
 # en-hash: 2b4bc547e505c8c5e7316cbd9c3ce903
 msgid "Server returned HTTP %d:\n%s"
-msgstr ""
+msgstr "Сервер повернув HTTP %d:\n%s"
 
 # en-hash: 77afe6fd6d53082d89a00cedd10dfb3d
 msgid "Server: %s"
-msgstr ""
+msgstr "Сервер: %s"
 
 # en-hash: 2555393157815eda5f15be1fc5627ed7
 msgid "Set Server URL"
-msgstr ""
+msgstr "Встановити URL сервера"
 
 # en-hash: 1eb558b5d865ebabb06575f5f0042599
 msgid "Sink"
-msgstr ""
+msgstr "Sink"
 
-# en-hash: 0d454f0589b3a613bea5c9db66f04e6e
-msgid "Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nLatest Backend: %s\n"
-msgstr ""
+# en-hash: 19f9ff18f7743b5dfd9a8aec0f98e085
+msgid "Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nTarget Backend: %s\n"
+msgstr "Плагін Sink: %s\nДоступна остання: %s\n\nБекенд Cloudflare: %s\nЦільовий бекенд: %s\n"
 
 # en-hash: f64bd501a0c430a13f16c382e2801183
 msgid "Sink Updates & Version"
-msgstr ""
+msgstr "Оновлення та версія Sink"
 
 # en-hash: e7ba66608877eaec18db26dd739b4013
 msgid "Sink: Pair Device"
-msgstr ""
+msgstr "Sink: З'єднати пристрій"
 
 # en-hash: 2878788c63590675abf7d2bc0ee0097c
 msgid "Sink: Sync Now"
-msgstr ""
+msgstr "Sink: Синхронізувати зараз"
+
+# en-hash: ee63707bd6d2ac79ce1696aef3dd0978
+msgid "Status: Connected (Tap to test)"
+msgstr "Статус: Підключено (Торкніться для перевірки)"
+
+# en-hash: fa05981cc2e1310a15b5ffd73f3dbc71
+msgid "Status: Not Paired (Tap to pair)"
+msgstr "Статус: Не з'єднано (Торкніться для з'єднання)"
 
 # en-hash: e6779d462a374ba68c5d19fdbe9b642f
 msgid "Sync Progress Now"
-msgstr ""
-
-# en-hash: c501e1f9495ff8eab7c7798b1e38bea4
-msgid "Sync X-Ray Cache"
-msgstr ""
+msgstr "Синхронізувати прогрес зараз"
 
 # en-hash: 9a0d5b8b784e6e32035c24675acbd595
 msgid "Synced Books (Cloud Library)"
-msgstr ""
+msgstr "Синхронізовані книги (Хмарна бібліотека)"
 
 # en-hash: 0f111cf75296ea35df2ace16e8a18241
 msgid "Synced from cloud: %.1f%% (%s)"
-msgstr ""
+msgstr "Синхронізовано з хмари: %.1f%% (%s)"
 
 # en-hash: e8a6d99eb898c3f48b663da56fc11cde
 msgid "Synced to cloud: %.1f%%"
-msgstr ""
+msgstr "Синхронізовано з хмарою: %.1f%%"
 
 # en-hash: c92e6c4ff7075865e80918469a6d887a
 msgid "Syncing with Sink server..."
-msgstr ""
+msgstr "Синхронізація з сервером Sink..."
+
+# en-hash: 7f43379ea53af037c8a6b553bab61586
+msgid "Too many redirects while downloading update."
+msgstr "Забагато перенаправлень під час завантаження оновлення."
 
 # en-hash: eabe81c1919fc176da8928966a8eabb8
 msgid "Triggering Cloudflare backend update..."
-msgstr ""
+msgstr "Запуск оновлення бекенду Cloudflare..."
 
 # en-hash: 88183b946cc5f0e8c96b2e66e1c74a7e
 msgid "Unknown"
-msgstr ""
+msgstr "Невідомо"
 
-# en-hash: 5ff395ed919579fb258f6e94d0ef912a
-msgid "Unlink Device/Clear Account"
-msgstr ""
+# en-hash: d819182ece98a64349eaaddddc055e9b
+msgid "Unlink Device"
+msgstr "Від'єднати пристрій"
 
-# en-hash: ad7ec437ea8ccc0b43b97afa699d0b00
-msgid "Update Backend Now"
-msgstr ""
+# en-hash: 019225947138d4bce52f1f28d50c1d9f
+msgid "Update Backend"
+msgstr "Оновити бекенд"
 
 # en-hash: c498c80a98cf895782f38e7175bc9701
 msgid "Update Plugin"
-msgstr ""
+msgstr "Оновити плагін"
+
+# en-hash: b2b20f3c97ce4cb832865ab999a603fc
+msgid "Update check error:\n"
+msgstr "Помилка перевірки оновлень:\n"
 
 # en-hash: 445d73ec0479f5ff9c89eeff9c3de0c9
 msgid "Update check failed:\n"
-msgstr ""
+msgstr "Помилка перевірки оновлень:\n"
 
 # en-hash: 8a3668b0f7baa857a2b2be28d61eee19
 msgid "Updater module not available."
-msgstr ""
+msgstr "Модуль оновлення недоступний."
 
 # en-hash: 924c55ab0c9aeb110a5e15752643da06
 msgid "Welcome & Setup Guide"
-msgstr ""
+msgstr "Посібник з привітання та налаштування"
 
 # en-hash: ecc1598a145a24203d9bcbd8be700d30
 msgid "Welcome to Sink"
-msgstr ""
+msgstr "Ласкаво просимо до Sink"
 
-# en-hash: b5df1ec8b1e17a95cac17a9cd0acec5c
-msgid "Welcome to Sink!\n\nSink gives you private, seamless reading progress and X-Ray synchronization across all your KOReader devices.\n\nSetup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."
-msgstr ""
+# en-hash: 4cb06765f1d6d6667c948f64459c5f6f
+msgid "Welcome to Sink!\n\nSink gives you private, seamless reading progress synchronization across all your KOReader devices.\n\nSetup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."
+msgstr "Ласкаво просимо до Sink!\n\nSink забезпечує приватну та безшовну синхронізацію прогресу читання на всіх ваших пристроях KOReader.\n\nДля налаштування потрібен власний безкоштовний бекенд Cloudflare Worker (займає 2 хвилини, 100% безкоштовно назавжди на безкоштовному тарифному плані Cloudflare, кредитна картка не потрібна)."
 
 # en-hash: 3ddbd341065edde5b6532c76d92fc9bf
 msgid "Your GitHub fork also auto-syncs daily via GitHub Actions."
-msgstr ""
+msgstr "Ваш форк GitHub також автоматично синхронізується щодня через GitHub Actions."
 
 # en-hash: 9cfefed8fb9497baa5cd519d7d2bb5d7
 msgid "current_language"
-msgstr ""
+msgstr "uk"
 
 # en-hash: 27310f957a7c4da22537887e568d400b
 msgid "✓ Backend update triggered!\n\nCloudflare is rebuilding your Worker in the background (~30-45 seconds)."
-msgstr ""
+msgstr "✓ Оновлення бекенду запущено!\n\nCloudflare перебирає ваш Worker у фоновому режимі (~30-45 секунд)."
 
-# en-hash: 687201e624f865892669b1937b36d84f
-msgid "✓ Connected & Synced!\nAccount: "
-msgstr ""
+# en-hash: 6aa69af9ea5a05a71dd995272914e990
+msgid "✓ Connected to Sink server!\nSync is active and healthy."
+msgstr "✓ Підключено до сервера Sink!\nСинхронізація активна та працює."
 
-# en-hash: 7948ec8a56cec3c46023793087050782
-msgid "✓ E-Reader Paired Successfully!\n\nConnected as: %s\nReading progress will now sync automatically."
-msgstr ""
+# en-hash: 7dc3b0979c69b49c7f8840c1478c6a64
+msgid "✓ E-Reader Paired Successfully!\n\nReading progress will now sync automatically."
+msgstr "✓ Читалку успішно зв'язано!\n\nПрогрес читання тепер синхронізуватиметься автоматично."
+
+# en-hash: 1d64a4bae0620cdab2717daeea89bcca
+msgid "✓ Pairing PIN updated successfully!\nYou can now use this PIN when connecting devices."
+msgstr "✓ PIN-код успішно оновлено!\nТепер ви можете використовувати його при підключенні пристроїв."
 
 # en-hash: 002ef1e9ffc6632f8f852326ff6d7965
 msgid "✓ Plugin is up to date."
-msgstr ""
+msgstr "✓ Плагін оновлено до останньої версії."
 
 # en-hash: 74e57e6b3051c93215e676599c169e09
 msgid "✓ Sink %s installed successfully!\n\nRestart KOReader now to apply the update?"
-msgstr ""
+msgstr "✓ Sink %s успішно встановлено!\n\nПерезапустити KOReader зараз, щоб застосувати оновлення?"
+
+# en-hash: cf8791a8f1492d35ff6299d6f7a728a8
+msgid "⬆ Plugin update available!"
+msgstr "⬆ Доступне оновлення плагіна!"
 
