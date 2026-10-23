@@ -117,14 +117,18 @@ function Localization:loadLanguage()
         if lang and lang ~= "" then
             -- Handle formats like de_DE, es_ES, pt_BR, zh_CN
             local simplified = lang:gsub("-", "_")
-            if self:hasLanguage(simplified) then
-                self.current_language = simplified
+            local has, matched = self:hasLanguage(simplified)
+            if has then
+                self.current_language = matched
                 return
             end
             local prefix = lang:match("^(%a+)")
-            if prefix and self:hasLanguage(prefix) then
-                self.current_language = prefix
-                return
+            if prefix then
+                local has_p, matched_p = self:hasLanguage(prefix)
+                if has_p then
+                    self.current_language = matched_p
+                    return
+                end
             end
         end
     end
@@ -135,8 +139,9 @@ function Localization:hasLanguage(lang)
     if not self.available_languages then
         self:discoverLanguages()
     end
+    local lower_lang = lang:lower()
     for _, l in ipairs(self.available_languages) do
-        if l == lang then return true end
+        if l == lang or l:lower() == lower_lang then return true, l end
     end
     return false
 end

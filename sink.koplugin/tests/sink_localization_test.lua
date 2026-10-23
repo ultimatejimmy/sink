@@ -149,4 +149,15 @@ for _, po_file in ipairs(po_files) do
     end
 end
 
+-- Test Suite 5: Dialect and case-insensitive language resolution (e.g., pt_BR -> pt_br.po, zh-CN -> zh_CN.po)
+mock_settings.language = "pt_BR"
+Loc:init(base_dir)
+assert(Loc.current_language == "pt_br", "pt_BR setting should match pt_br.po file on disk")
+assert(Loc:t("Cancel") == "Cancelar", "pt_BR should translate Cancel to Cancelar")
+
+mock_settings.language = "zh-CN"
+Loc:init(base_dir)
+assert(Loc.current_language == "zh_CN", "zh-CN setting should match zh_CN.po file on disk")
+assert(Loc:t("Cancel") == "取消", "zh-CN should translate Cancel to 取消")
+
 print("--> All localization tests passed successfully!")
