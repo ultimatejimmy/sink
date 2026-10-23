@@ -16,7 +16,6 @@ local socket = require("socket")
 local http = require("socket.http")
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
-local _ = require("gettext")
 local logger = require("logger")
 
 local Blitbuffer = nil
@@ -33,7 +32,19 @@ local SinkPairing = {
     poll_timer = nil,
     is_pairing = false,
     poll_count = 0,
+    loc = nil,
 }
+
+local function _(text, ...)
+    if SinkPairing.loc and SinkPairing.loc.t then
+        return SinkPairing.loc:t(text, ...)
+    end
+    if select("#", ...) > 0 then
+        local ok, s = pcall(string.format, text, ...)
+        if ok then return s end
+    end
+    return text
+end
 
 local function cleanUrl(url)
     if not url then return "" end

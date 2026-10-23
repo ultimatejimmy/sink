@@ -12,9 +12,11 @@ local socket = require("socket")
 local http = require("socket.http")
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
+
+local plugin_path = ((...) or ""):match("(.-)[^%.]+$") or ""
 local _ = require("gettext")
 local Loc = nil
-pcall(function()
+local loc_ok, loc_err = pcall(function()
     Loc = require(plugin_path .. "localization_sink")
     if Loc and Loc.init then
         Loc:init()
@@ -23,16 +25,19 @@ pcall(function()
         end
     end
 end)
+if not loc_ok and logger and logger.warn then
+    logger.warn("Sink: localization unavailable:", loc_err)
+end
 
 local Event = nil
 pcall(function() Event = require("ui/event") end)
 local util = nil
 pcall(function() util = require("util") end)
 
-local plugin_path = ((...) or ""):match("(.-)[^%.]+$") or ""
 local SinkPairing = nil
 pcall(function()
     SinkPairing = require(plugin_path .. "sink_pairing")
+    if SinkPairing and Loc then SinkPairing.loc = Loc end
 end)
 local SinkUpdater = nil
 pcall(function()

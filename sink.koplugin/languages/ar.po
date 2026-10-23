@@ -31,7 +31,7 @@ msgstr "فشل المصادقة (401 غير مصرح).\nاضغط على 'إقر�
 
 # en-hash: 37f8267a3e714899a3a93e556537b999
 msgid "Authentication failed (401 Unauthorized).\nYour e-reader's credentials do not match this server.\n\nTap 'Re-Pair Device' to reconnect."
-msgstr "فشل المصادقة (401 غير مصرح به).\nبيانات اعتماد القارئ الإلكتروني الخاص بك لا تتطابق مع هذا الخادم.\n\nانقر على \\"إعادة إقران الجهاز\\" لإعادة الاتصال."
+msgstr "فشل المصادقة (401 غير مصرح به).\nبيانات اعتماد القارئ الإلكتروني الخاص بك لا تتطابق مع هذا الخادم.\n\nانقر على \\\"إعادة إقران الجهاز\\\" لإعادة الاتصال."
 
 # en-hash: a824b37efb0b99cc3b89aed704cd9343
 msgid "Auto-Sync on Read/Close/Sleep"

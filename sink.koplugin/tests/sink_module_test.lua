@@ -43,7 +43,7 @@ package.loaded["ui/widget/infomessage"] = { new = function(self, o) return o end
 package.loaded["ui/widget/inputdialog"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/confirmbox"] = { new = function(self, o) return o end }
 package.loaded["ui/widget/buttondialog"] = { new = function(self, o) return o end }
-package.loaded["device"] = { model = "TestModel", id = "test_id_123", screen = { scaleBySize = function(self, s) return s end } }
+package.loaded["device"] = { model = "TestModel", id = "test_id_123", isKindle = function() return true end, screen = { scaleBySize = function(self, s) return s end } }
 package.loaded["logger"] = { dbg = function() end, info = function() end, warn = function() end }
 package.loaded["gettext"] = function(s) return s end
 package.loaded["ui/event"] = {

@@ -19,6 +19,16 @@ local Localization = {
     available_languages = {},
 }
 
+-- Convert .po escape sequences into real characters
+local function unescape(s)
+    if not s then return s end
+    s = s:gsub("\\n", "\n")
+    s = s:gsub("\\t", "\t")
+    s = s:gsub('\\"', '"')
+    s = s:gsub("\\\\", "\\")
+    return s
+end
+
 -- Simple .po parser
 function Localization:parsePO(filepath)
     local translations = {}
@@ -36,19 +46,19 @@ function Localization:parsePO(filepath)
                 if msgid and msgstr then
                     translations[msgid] = msgstr
                 end
-                msgid = line:match('^msgid%s+"(.-)"')
+                msgid = line:match('^msgid%s+"(.*)"%s*$')
                 msgstr = nil
                 in_msgid = true
                 in_msgstr = false
             elseif line:match('^msgstr%s+"') then
-                msgstr = line:match('^msgstr%s+"(.-)"')
+                msgstr = line:match('^msgstr%s+"(.*)"%s*$')
                 in_msgid = false
                 in_msgstr = true
             elseif line:match('^"') then
-                local continuation = line:match('^"(.-)"')
-                if in_msgid and msgid then
+                local continuation = line:match('^"(.*)"%s*$')
+                if in_msgid and msgid and continuation then
                     msgid = msgid .. continuation
-                elseif in_msgstr and msgstr then
+                elseif in_msgstr and msgstr and continuation then
                     msgstr = msgstr .. continuation
                 end
             end
@@ -60,15 +70,13 @@ function Localization:parsePO(filepath)
     end
     file:close()
 
+    -- Unescape both keys and values so they match strings in Lua code
+    local result = {}
     for key, value in pairs(translations) do
-        value = value:gsub("\\n", "\n")
-        value = value:gsub("\\t", "\t")
-        value = value:gsub('\\"', '"')
-        value = value:gsub("\\\\", "\\")
-        translations[key] = value
+        result[unescape(key)] = unescape(value)
     end
 
-    return translations
+    return result
 end
 
 function Localization:init(path)
