@@ -1,9 +1,15 @@
 msgid ""
 msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: jpiebrig <jpv69005@gmx.fr>\n"
 "Language-Team: FR\n"
 "Language: fr\n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.4.2\n"
 
 # en-hash: b75877fdde7f1d19ee40acd02890be1c
 msgid " [This Device]"
@@ -18,28 +24,60 @@ msgid "%s (Update recommended: %s)"
 msgstr "%s (Mise à jour recommandée : %s)"
 
 # en-hash: b348f6f9dd77c4915df1397ac19f16fd
-msgid "1. On your phone or computer, open:\n%s\n\n2. Enter this pairing code:\n\n[ %s ]\n\n(Waiting for confirmation...)"
-msgstr "1. Sur votre téléphone ou votre ordinateur, ouvrez :\n%s\n\n2. Saisissez ce code d'appairage :\n\n[ %s ]\n\n(En attente de confirmation...)"
+msgid ""
+"1. On your phone or computer, open:\n"
+"%s\n"
+"\n"
+"2. Enter this pairing code:\n"
+"\n"
+"[ %s ]\n"
+"\n"
+"(Waiting for confirmation...)"
+msgstr ""
+"1. Sur votre téléphone ou votre ordinateur, ouvrez :\n"
+"%s\n"
+"\n"
+"2. Saisissez ce code d'appairage :\n"
+"\n"
+"[ %s ]\n"
+"\n"
+"(En attente de confirmation...)"
 
 # en-hash: 72d64b2fd907a3bc9c165401861f3ac2
 msgid "Already synchronized with cloud."
 msgstr "Déjà synchronisé avec le cloud."
 
 # en-hash: 95ce3c7e75bfb28e7df96004f552fc67
-msgid "Authentication failed (401 Unauthorized).\nTap 'Pair Device' to re-link your e-reader."
-msgstr "Échec de l'authentification (401 Non autorisé).\nAppuyez sur « Appairer l'appareil » pour reconnecter votre liseuse."
+msgid ""
+"Authentication failed (401 Unauthorized).\n"
+"Tap 'Pair Device' to re-link your e-reader."
+msgstr ""
+"Échec de l'authentification (401 Non autorisé).\n"
+"Appuyez sur Appairer l'appareil pour reconnecter votre liseuse."
 
 # en-hash: 37f8267a3e714899a3a93e556537b999
-msgid "Authentication failed (401 Unauthorized).\nYour e-reader's credentials do not match this server.\n\nTap 'Re-Pair Device' to reconnect."
-msgstr "Échec de l'authentification (401 Non autorisé).\nLes identifiants de votre liseuse ne correspondent pas à ce serveur.\n\nAppuyez sur « Réappairer l'appareil » pour vous reconnecter."
+msgid ""
+"Authentication failed (401 Unauthorized).\n"
+"Your e-reader's credentials do not match this server.\n"
+"\n"
+"Tap 'Re-Pair Device' to reconnect."
+msgstr ""
+"Échec de l'authentification (401 Non autorisé).\n"
+"Les identifiants de votre liseuse ne correspondent pas à ce serveur.\n"
+"\n"
+"Appuyez sur Réappairer l'appareil pour vous reconnecter."
 
 # en-hash: a824b37efb0b99cc3b89aed704cd9343
 msgid "Auto-Sync on Read/Close/Sleep"
 msgstr "Synchronisation automatique à la lecture/fermeture/mise en veille"
 
 # en-hash: 187c1b3c23e937a7de71a0df352410a3
-msgid "Backend endpoint not found (404).\nPlease deploy the updated backend to your Cloudflare Worker."
-msgstr "Point de terminaison introuvable (404).\nVeuillez déployer le backend mis à jour sur votre Cloudflare Worker."
+msgid ""
+"Backend endpoint not found (404).\n"
+"Please deploy the updated backend to your Cloudflare Worker."
+msgstr ""
+"Point de terminaison introuvable (404).\n"
+"Veuillez déployer le backend mis à jour sur votre Cloudflare Worker."
 
 # en-hash: fb31d5d60dfc91743223af2091ad4e75
 msgid "Backend update trigger failed:\n"
@@ -58,8 +96,20 @@ msgid "Book removed from cloud library."
 msgstr "Livre supprimé de la bibliothèque cloud."
 
 # en-hash: c259958d353bf7e81ae4f2238bc83834
-msgid "Book: %s%s\nProgress: %.1f%%\nLast Device: %s\nLast Sync: %s\n\nRemove this book's progress from cloud server?"
-msgstr "Livre : %s%s\nProgression : %.1f%%\nDernier appareil : %s\nDernière synchronisation : %s\n\nSupprimer la progression de ce livre du serveur cloud ?"
+msgid ""
+"Book: %s%s\n"
+"Progress: %.1f%%\n"
+"Last Device: %s\n"
+"Last Sync: %s\n"
+"\n"
+"Remove this book's progress from cloud server?"
+msgstr ""
+"Livre : %s%s\n"
+"Progression : %.1f%%\n"
+"Dernier appareil : %s\n"
+"Dernière synchronisation : %s\n"
+"\n"
+"Supprimer la progression de ce livre du serveur cloud ?"
 
 # en-hash: ea4788705e6873b424c65e91c2846b19
 msgid "Cancel"
@@ -106,16 +156,28 @@ msgid "Could not reach GitHub Releases (HTTP %s)."
 msgstr "Impossible d'accéder à GitHub Releases (HTTP %s)."
 
 # en-hash: 8e9483265efe4f1a2c6a6148a7204146
-msgid "Could not reach Sink server (%s).\nPlease verify Server URL and Wi-Fi connection."
-msgstr "Impossible d'accéder au serveur Sink (%s).\nVeuillez vérifier l'URL du serveur et la connexion Wi-Fi."
+msgid ""
+"Could not reach Sink server (%s).\n"
+"Please verify Server URL and Wi-Fi connection."
+msgstr ""
+"Impossible d'accéder au serveur Sink (%s).\n"
+"Veuillez vérifier l'URL du serveur et la connexion Wi-Fi."
 
 # en-hash: fd139b1d532801c3c7955ce10b583a03
-msgid "Could not trigger automated rebuild:\n\n"
-msgstr "Impossible de déclencher la reconstruction automatique :\n\n"
+msgid ""
+"Could not trigger automated rebuild:\n"
+"\n"
+msgstr ""
+"Impossible de déclencher la reconstruction automatique :\n"
+"\n"
 
 # en-hash: 0f008b1295f596b3359c5797ed4a60f5
-msgid "Could not update PIN (%s).\nPlease check your connection or backend deployment."
-msgstr "Impossible de mettre à jour le code PIN (%s).\nVeuillez vérifier votre connexion ou le déploiement du backend."
+msgid ""
+"Could not update PIN (%s).\n"
+"Please check your connection or backend deployment."
+msgstr ""
+"Impossible de mettre à jour le code PIN (%s).\n"
+"Veuillez vérifier votre connexion ou le déploiement du backend."
 
 # en-hash: 044d98d4da2d52af45b4a2ae21334b3c
 msgid "Device removed."
@@ -126,8 +188,18 @@ msgid "Device unlinked."
 msgstr "Appareil déconnecté."
 
 # en-hash: e95588b6ce6fafb613c31ccefc9c6451
-msgid "Device: %s\nID: %s\nLast Active: %s\n\nRemove this device from your server?"
-msgstr "Appareil : %s\nID : %s\nDernière activité : %s\n\nSupprimer cet appareil de votre serveur ?"
+msgid ""
+"Device: %s\n"
+"ID: %s\n"
+"Last Active: %s\n"
+"\n"
+"Remove this device from your server?"
+msgstr ""
+"Appareil : %s\n"
+"ID : %s\n"
+"Dernière activité : %s\n"
+"\n"
+"Supprimer cet appareil de votre serveur ?"
 
 # en-hash: c8a59e7135a20b362f9c768b09454fdb
 msgid "Dismiss"
@@ -234,8 +306,16 @@ msgid "Not reachable"
 msgstr "Injoignable"
 
 # en-hash: b503a77326440450833aaa989f9df59c
-msgid "Or open: %s\nand enter code: [ %s ]\n\n(Waiting for confirmation...)"
-msgstr "Ou ouvrez : %s\net saisissez le code : [ %s ]\n\n(En attente de confirmation...)"
+msgid ""
+"Or open: %s\n"
+"and enter code: [ %s ]\n"
+"\n"
+"(Waiting for confirmation...)"
+msgstr ""
+"Ou ouvrez : %s\n"
+"et saisissez le code : [ %s ]\n"
+"\n"
+"(En attente de confirmation...)"
 
 # en-hash: 66f0b3639cdbb6e63241fdbdf529dbef
 msgid "PIN must be at least 4 digits."
@@ -283,7 +363,7 @@ msgstr "Réappairer l'appareil (téléphone/PC)"
 
 # en-hash: 3c5e851cd8f912b758b2871b1d6f51d3
 msgid "Redirect response missing Location header."
-msgstr "L'en-tête Location est absent de la réponse de redirection."
+msgstr "L'en-tête de localisation est absent de la réponse de redirection."
 
 # en-hash: 1063e38cb53d94d386f21227fcd84717
 msgid "Remove"
@@ -302,8 +382,12 @@ msgid "Restart"
 msgstr "Redémarrer"
 
 # en-hash: 099f68f1c01f941007b08bf7a08383ab
-msgid "Scan to deploy free Worker:\n%s"
-msgstr "Scannez pour déployer un Worker gratuit :\n%s"
+msgid ""
+"Scan to deploy free Worker:\n"
+"%s"
+msgstr ""
+"Scannez pour déployer un Worker gratuit :\n"
+"%s"
 
 # en-hash: 4dbb7af7a2ed267f97c4bb02cc680a22
 msgid "Scan with your phone to pair instantly:"
@@ -318,8 +402,12 @@ msgid "Server URL Required"
 msgstr "URL du serveur requise"
 
 # en-hash: 2b4bc547e505c8c5e7316cbd9c3ce903
-msgid "Server returned HTTP %d:\n%s"
-msgstr "Le serveur a renvoyé HTTP %d :\n%s"
+msgid ""
+"Server returned HTTP %d:\n"
+"%s"
+msgstr ""
+"Le serveur a renvoyé HTTP %d :\n"
+"%s"
 
 # en-hash: 77afe6fd6d53082d89a00cedd10dfb3d
 msgid "Server: %s"
@@ -334,8 +422,18 @@ msgid "Sink"
 msgstr "Sink"
 
 # en-hash: 19f9ff18f7743b5dfd9a8aec0f98e085
-msgid "Sink Plugin: %s\nLatest Available: %s\n\nCloudflare Backend: %s\nTarget Backend: %s\n"
-msgstr "Plugin Sink : %s\nDernière version disponible : %s\n\nBackend Cloudflare : %s\nBackend cible : %s\n"
+msgid ""
+"Sink Plugin: %s\n"
+"Latest Available: %s\n"
+"\n"
+"Cloudflare Backend: %s\n"
+"Target Backend: %s\n"
+msgstr ""
+"Plugin Sink : %s\n"
+"Dernière version disponible : %s\n"
+"\n"
+"Backend Cloudflare : %s\n"
+"Backend cible : %s\n"
 
 # en-hash: f64bd501a0c430a13f16c382e2801183
 msgid "Sink Updates & Version"
@@ -422,8 +520,18 @@ msgid "Welcome to Sink"
 msgstr "Bienvenue sur Sink"
 
 # en-hash: 4cb06765f1d6d6667c948f64459c5f6f
-msgid "Welcome to Sink!\n\nSink gives you private, seamless reading progress synchronization across all your KOReader devices.\n\nSetup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."
-msgstr "Bienvenue sur Sink !\n\nSink vous offre une synchronisation privée et fluide de votre progression de lecture sur tous vos appareils KOReader.\n\nLa configuration nécessite votre propre backend Cloudflare Worker gratuit (prend 2 minutes, 100 % gratuit à vie sur l'offre gratuite de Cloudflare, aucune carte bancaire requise)."
+msgid ""
+"Welcome to Sink!\n"
+"\n"
+"Sink gives you private, seamless reading progress synchronization across all your KOReader devices.\n"
+"\n"
+"Setup requires your own free Cloudflare Worker backend (takes 2 minutes, 100% free forever on Cloudflare's free tier, zero credit card required)."
+msgstr ""
+"Bienvenue sur Sink !\n"
+"\n"
+"Sink vous offre une synchronisation privée et fluide de votre progression de lecture sur tous vos appareils KOReader.\n"
+"\n"
+"La configuration nécessite votre propre backend Cloudflare Worker gratuit (prend 2 minutes, 100 % gratuit à vie sur l'offre gratuite de Cloudflare, aucune carte bancaire requise)."
 
 # en-hash: 3ddbd341065edde5b6532c76d92fc9bf
 msgid "Your GitHub fork also auto-syncs daily via GitHub Actions."
@@ -431,33 +539,58 @@ msgstr "Votre fork GitHub se synchronise également automatiquement chaque jour 
 
 # en-hash: 9cfefed8fb9497baa5cd519d7d2bb5d7
 msgid "current_language"
-msgstr "fr"
+msgstr "langage actuel"
 
 # en-hash: 27310f957a7c4da22537887e568d400b
-msgid "✓ Backend update triggered!\n\nCloudflare is rebuilding your Worker in the background (~30-45 seconds)."
-msgstr "✓ Mise à jour du backend déclenchée !\n\nCloudflare reconstruit votre Worker en arrière-plan (~30-45 secondes)."
+msgid ""
+"✓ Backend update triggered!\n"
+"\n"
+"Cloudflare is rebuilding your Worker in the background (~30-45 seconds)."
+msgstr ""
+"✓ Mise à jour du backend déclenchée !\n"
+"\n"
+"Cloudflare reconstruit votre Worker en arrière-plan (~30-45 secondes)."
 
 # en-hash: 6aa69af9ea5a05a71dd995272914e990
-msgid "✓ Connected to Sink server!\nSync is active and healthy."
-msgstr "✓ Connecté au serveur Sink !\nLa synchronisation est active et opérationnelle."
+msgid ""
+"✓ Connected to Sink server!\n"
+"Sync is active and healthy."
+msgstr ""
+"✓ Connecté au serveur Sink !\n"
+"La synchronisation est active et opérationnelle."
 
 # en-hash: 7dc3b0979c69b49c7f8840c1478c6a64
-msgid "✓ E-Reader Paired Successfully!\n\nReading progress will now sync automatically."
-msgstr "✓ Liseuse appairée avec succès !\n\nLa progression de lecture se synchronisera désormais automatiquement."
+msgid ""
+"✓ E-Reader Paired Successfully!\n"
+"\n"
+"Reading progress will now sync automatically."
+msgstr ""
+"✓ Liseuse appairée avec succès !\n"
+"\n"
+"La progression de lecture se synchronisera désormais automatiquement."
 
 # en-hash: 1d64a4bae0620cdab2717daeea89bcca
-msgid "✓ Pairing PIN updated successfully!\nYou can now use this PIN when connecting devices."
-msgstr "✓ Code PIN d\'appairage mis à jour avec succès !\nVous pouvez désormais utiliser ce code PIN pour connecter vos appareils."
+msgid ""
+"✓ Pairing PIN updated successfully!\n"
+"You can now use this PIN when connecting devices."
+msgstr ""
+"✓ Le code PIN d'appairage a été mis à jour avec succès !\n"
+"Vous pouvez désormais utiliser ce code PIN pour connecter des appareils."
 
 # en-hash: 002ef1e9ffc6632f8f852326ff6d7965
 msgid "✓ Plugin is up to date."
 msgstr "✓ Le plugin est à jour."
 
 # en-hash: 74e57e6b3051c93215e676599c169e09
-msgid "✓ Sink %s installed successfully!\n\nRestart KOReader now to apply the update?"
-msgstr "✓ Sink %s installé avec succès !\n\nVoulez-vous redémarrer KOReader maintenant pour appliquer la mise à jour ?"
+msgid ""
+"✓ Sink %s installed successfully!\n"
+"\n"
+"Restart KOReader now to apply the update?"
+msgstr ""
+"✓ Sink %s installé avec succès !\n"
+"\n"
+"Redémarrer KOReader maintenant pour appliquer la mise à jour ?"
 
 # en-hash: cf8791a8f1492d35ff6299d6f7a728a8
 msgid "⬆ Plugin update available!"
 msgstr "⬆ Mise à jour du plugin disponible !"
-
