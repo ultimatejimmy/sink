@@ -65,7 +65,7 @@ msgstr ""
 "Échec de l'authentification (401 Non autorisé).\n"
 "Les identifiants de votre liseuse ne correspondent pas à ce serveur.\n"
 "\n"
-"Appuyez sur « Ré-appairer l'appareil pour vous reconnecter »."
+"Appuyez sur « Ré-appairer » l'appareil pour vous reconnecter."
 
 # en-hash: a824b37efb0b99cc3b89aed704cd9343
 msgid "Auto-Sync on Read/Close/Sleep"
