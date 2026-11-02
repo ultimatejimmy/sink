@@ -363,7 +363,7 @@ msgstr "Réappairer l'appareil (téléphone/PC)"
 
 # en-hash: 3c5e851cd8f912b758b2871b1d6f51d3
 msgid "Redirect response missing Location header."
-msgstr "L'en-tête de localisation est absent de la réponse de redirection."
+msgstr "L'en-tête « Location » est absente de la réponse de redirection."
 
 # en-hash: 1063e38cb53d94d386f21227fcd84717
 msgid "Remove"
@@ -539,7 +539,7 @@ msgstr "Votre fork GitHub se synchronise également automatiquement chaque jour 
 
 # en-hash: 9cfefed8fb9497baa5cd519d7d2bb5d7
 msgid "current_language"
-msgstr "langage actuel"
+msgstr "fr"
 
 # en-hash: 27310f957a7c4da22537887e568d400b
 msgid ""
