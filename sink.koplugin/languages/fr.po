@@ -53,7 +53,7 @@ msgid ""
 "Tap 'Pair Device' to re-link your e-reader."
 msgstr ""
 "Échec de l'authentification (401 Non autorisé).\n"
-"Appuyez sur Appairer l'appareil pour reconnecter votre liseuse."
+"Appuyez sur « Appairer l'appareil » pour reconnecter votre liseuse."
 
 # en-hash: 37f8267a3e714899a3a93e556537b999
 msgid ""
@@ -65,7 +65,7 @@ msgstr ""
 "Échec de l'authentification (401 Non autorisé).\n"
 "Les identifiants de votre liseuse ne correspondent pas à ce serveur.\n"
 "\n"
-"Appuyez sur Réappairer l'appareil pour vous reconnecter."
+"Appuyez sur « Ré-appairer l'appareil pour vous reconnecter »."
 
 # en-hash: a824b37efb0b99cc3b89aed704cd9343
 msgid "Auto-Sync on Read/Close/Sleep"
